@@ -35,8 +35,10 @@ outdirAttach = os.path.join(outdir,"attachments")
 outdirEmoticons = os.path.join(outdir,"emoticons")
 if not os.path.exists(outdir):
     os.mkdir(outdir)
+
 if not os.path.exists(outdirAttach):
     os.mkdir(outdirAttach)
+
 if not os.path.exists(outdirEmoticons):
     os.mkdir(outdirEmoticons)
 
@@ -62,8 +64,6 @@ def getAttachments(pageid):
         myAttachmentsList.append(myTitle)
     return(myAttachmentsList)
 
-
-
 def getPageName(pageid):
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageid)
     r_pagetree = requests.get(serverURL, auth=(userName, apiToken))
@@ -81,10 +81,29 @@ def dumpHtml(argHTML,argTitle,argPageID):
     htmlFileName = str(argTitle) + '.html'
     htmlFilePath = os.path.join(outdir,htmlFileName)
     myAttachments = getAttachments(argPageID)
-    myEmbeds = soup.findAll('img',class_="confluence-embedded-image")
+    #
+    # dealing with "confluence-embedded-image confluence-external-resource"
+    #
+    myEmbedsExternals = soup.findAll('img',class_="confluence-embedded-image confluence-external-resource")
+    myEmbedsExternalsCounter = 0
+    for n in myEmbedsExternals:
+        origAttachmentPath = n['src']
+        attachmentName = origAttachmentPath.rsplit('/',1)[-1]
+        attachmentName = attachmentName.rsplit('?')[0]
+        attachmentName = str(argPageID) + "-" + str(myEmbedsExternalsCounter) + "-" + attachmentName
+        myAttachmentPath = os.path.join(outdirAttach,attachmentName)
+        toDownload = requests.get(origAttachmentPath, allow_redirects=True)
+        open(myAttachmentPath,'wb').write(toDownload.content)
+        print(myAttachmentPath)
+        n['width'] = "1024px"
+        n['height'] = "auto"
+        n['onclick'] = "window.open(\"" + myAttachmentPath + "\")"
+        n['src'] = myAttachmentPath
+        myEmbedsExternalsCounter = myEmbedsExternalsCounter + 1
     #
     # dealing with "confluence-embedded-image"
     #
+    myEmbeds = soup.findAll('img',class_="confluence-embedded-image")
     for n in myEmbeds:
         origAttachmentPath = n['src']
         attachmentName = origAttachmentPath.rsplit('/',1)[-1]
