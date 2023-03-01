@@ -1,4 +1,4 @@
-# Project Title
+# Confluence Dump With Python
 
 Dump Confluence pages using Python (requests) in HTML format, including embedded pictures and attachments.
 It will updated all references to downloaded files to their local relative path.
