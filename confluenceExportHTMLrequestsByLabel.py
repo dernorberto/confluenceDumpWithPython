@@ -15,19 +15,20 @@ userName = os.environ["atlassianUserEmail"]
 try:
     atlassianSite = sys.argv[1]
 except IndexError:
-    raise SystemExit(f"Usage: {sys.argv[0]} ")
+    raise SystemExit(f"Usage: {sys.argv[0]} <label>")
 print('Site: ' + atlassianSite)
 
 try:
     pageLabel = sys.argv[2]
 except IndexError:
-    raise SystemExit(f"Usage: {sys.argv[1]} ")
+    raise SystemExit(f"Usage: <site> {sys.argv[1]} ")
 print('Label: ' + pageLabel)
 
 # Create the output folders
 currentdir = os.getcwd()
 base_outdir = os.path.join(currentdir,"output")
 outdir = os.path.join(currentdir,"output")
+outdir = os.path.join(outdir,pageLabel)             # adding /<pageLabel> as a path under /output
 outdirAttach = os.path.join(outdir,"attachments")
 outdirEmoticons = os.path.join(outdir,"emoticons")
 outdirStyles = os.path.join(outdir,"styles")
@@ -44,7 +45,7 @@ if not os.path.exists(outdirStyles):
     os.mkdir(outdirStyles)
 
 if not os.path.exists(outdirStyles + '/site.css'):
-    print("Please copy site.css from styles/ to output/styles/")
+    os.popen('cp ' + base_outdir + '/styles/site.css ' + outdirStyles)
 
 def getPagesByLabel():
   url = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/search?cql=type=page AND label=\'' + pageLabel + '\''
@@ -125,7 +126,7 @@ def dumpHtml(argHTML,argTitle,argPageID):
     #
     # dealing with "emoticon"
     #
-    myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or 
+    myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or
     for e in myEmoticons:
         requestEmoticons = requests.get(e['src'], auth=(userName, apiToken))
         myEmoticonTitle = e['src']
