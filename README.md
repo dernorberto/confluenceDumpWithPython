@@ -8,15 +8,17 @@ It will updated all references to downloaded files to their local relative path.
 Purpose of the files:
 1. `confluenceExportHTMLrequestsByLabel.py`: download a set of pages based on one (or more) page Labels.
 2. `confluenceExportHTMLrequestsSingle.py`: download a single page by supplying the page ID as an argument.
+3. `confluenceExportHTMLrequestsPagePropertiesReport.py`: download page properties and all the pages in the report by supplying the page ID as an argument.
 
 For CSS Styling, it uses the `site.css` file that Confluence gnerates when exporting in HTML.
 
-It will create the folder structure
-* `output/`
-  * `output/attachments/`
-  * `output/emoticons/`
+Folder and file structure:
 
-You will need to manually copy the file `styles/site.css` into `output/styles/`.
+* `output/<pageID>`
+  * `output/<pageID>/attachments/`
+  * `output/<pageID>/emoticons/`
+  * `output/<pageID>/styles/`
+  * Copies the file `styles/site.css` into `output/<pageID>/styles/`.
 
 ## What it does
 
@@ -39,7 +41,6 @@ You will need to manually copy the file `styles/site.css` into `output/styles/`.
 * declare system variables:
   * `atlassianAPIToken`
   * `atlassianUserEmail`
-* manually copy the file `styles/site.css` into `output/styles/`.
 
 ### Dependencies
 
@@ -50,7 +51,7 @@ You will need to manually copy the file `styles/site.css` into `output/styles/`.
 ### Installing
 
 * Clone repo.
-  * It includes `styles/site.css`
+  * It already includes `styles/site.css`
 * Install dependencies.
 * Declare system variables for Atlassian API Token.
 
@@ -63,9 +64,15 @@ confluenceExportHTMLrequestsByLabel.py <site Name> <page Label of all pages to d
 ```
 
 * How to download a single page based on its ID.
- 
+
 ```
 confluenceExportHTMLrequestsSingle.py <site Name> <ID of page to dump>
+```
+
+* How to download Page Properties and all the contained pages.
+
+```
+confluenceExportHTMLrequestsPagePropertiesReport.py <site Name> <ID of page properties report page>
 ```
 
 ## Help
@@ -83,14 +90,16 @@ Contributors names and contact info
 
 ## Improvements
 
-* Create an index of the pages to use as a TOC.
-* Create a page layout to display TOC + articles.
-* Copy `styles/site.css` into `output/styles/` if not present.
+[ ] Create an index of the pages to use as a TOC.
+[ ] Create a page layout to display TOC + articles.
+[x] Copy `styles/site.css` into `output/styles/` if not present.
 
 ## Version History
 
+* 1.1
+  * Added Papge Properties dump and other smaller things
 * 1.0
-    * Initial Release
+  * Initial Release
 
 ## License
 
