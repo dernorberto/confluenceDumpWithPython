@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 ##!/usr/bin/env python3
 
-#import pypandoc # only needed if converting HTML to MD
 import requests
 import os.path
 import json
@@ -12,7 +11,6 @@ import sys
 
 apiToken = os.environ["atlassianAPIToken"]
 userName = os.environ["atlassianUserEmail"]
-
 
 try:
     atlassianSite = sys.argv[1]
@@ -26,11 +24,21 @@ except IndexError:
     raise SystemExit(f"Usage:<script>.py <site> {sys.argv[2]}")
 print('Page ID: ' + pageID)
 
+# get some information from page properties report page
+def getBodyExportView(pageid):
+    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageid) + '?expand=body.export_view'
+    response = requests.get(serverURL, auth=(userName, apiToken))
+    return(response)
+
+myReportBodyExportView = getBodyExportView(pageID).json()
+myReportExportViewTitle = myReportBodyExportView['title']
+myReportExportViewTitle = myReportExportViewTitle.replace("/","-")
 
 # Create the output directory
 currentdir = os.getcwd()
 base_outdir = os.path.join(currentdir,"output")
 outdir = os.path.join(currentdir,"output")
+outdir = os.path.join(outdir,str(pageID) + " - " + str(myReportExportViewTitle))
 outdirAttach = os.path.join(outdir,"attachments")
 outdirEmoticons = os.path.join(outdir,"emoticons")
 outdirStyles = os.path.join(outdir,"styles")
@@ -46,17 +54,30 @@ if not os.path.exists(outdirEmoticons):
 if not os.path.exists(outdirStyles):
     os.mkdir(outdirStyles)
 
-if not os.path.exists(outdirStyles + '/site.css'):
+if not os.path.exists(str(outdirStyles) + '/site.css'):
     os.system('cp ' + base_outdir + '/styles/site.css "' + outdirStyles + '"')
 
-def getBodyExportView(pageid):
-    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageID) + '?expand=body.export_view'
-    response = requests.get(serverURL, auth=(userName, apiToken))
-    return(response)
+myPagePropertiesChildren = []
+myPagePropertiesChildrenDict = {}
+def getPagePropertiesChildren(argHTML):
+    soup = bs(argHTML, "html.parser")
+    myPagePropertiesItems = soup.findAll('td',class_="title")
+    myPagePropertiesItemsCounter = 0
+    for n in myPagePropertiesItems:
+        myPageID = str(n['data-content-id'])
+        myPagePropertiesChildren.append(str(n['data-content-id']))
+        myPagePropertiesItemsCounter = myPagePropertiesItemsCounter + 1
+        myPageName = getPageName(int(myPageID))
+        myPageName = myPageName.rsplit('_',1)[1]
+        myPagePropertiesChildrenDict.update({ myPageID:{}})
+        myPagePropertiesChildrenDict[myPageID].update({"ID": myPageID})
+        myPagePropertiesChildrenDict[myPageID].update({"Name": myPageName})
+    print(str(myPagePropertiesItemsCounter) + " Pages")
+    return(myPagePropertiesChildrenDict)
 
 myAttachmentsList = []
 def getAttachments(pageid):
-    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageID) + '?expand=children.attachment'
+    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageid) + '?expand=children.attachment'
     response = requests.get(serverURL, auth=(userName, apiToken))
     myAttachments = response.json()['children']['attachment']['results']
     for n in myAttachments:
@@ -65,8 +86,6 @@ def getAttachments(pageid):
         url = 'https://' + atlassianSite + '.atlassian.net/wiki' + myTail
         requestAttachment = requests.get(url, auth=(userName, apiToken),allow_redirects=True)
         filePath = os.path.join(outdirAttach,myTitle)
-        #if (requestAttachment.content.decode("utf-8")).startswith("<!doctype html>"):
-        #    filePath = str(filePath) + ".html"
         open(filePath, 'wb').write(requestAttachment.content)
         myAttachmentsList.append(myTitle)
     return(myAttachmentsList)
@@ -83,11 +102,18 @@ htmlPageHeader = """    <head>
     </head>
 """
 
-def dumpHtml(argHTML,argTitle,argPageID):
+def dumpHtml(argHTML,argTitle,argPageID,argType):
     soup = bs(argHTML, "html.parser")
     htmlFileName = str(argTitle) + '.html'
     htmlFilePath = os.path.join(outdir,htmlFileName)
     myAttachments = getAttachments(argPageID)
+    if (argType != "report"):
+        myPagePropertiesChildrenDict[argPageID].update({"Filename": htmlFileName})
+    if (argType == "report"):
+        myPagePropertiesItems = soup.findAll('td',class_="title")
+        for o in myPagePropertiesItems:
+            p = o['data-content-id']
+            o.a['href'] = myPagePropertiesChildrenDict[p]['Filename']
     #
     # dealing with "confluence-embedded-image confluence-external-resource"
     #
@@ -132,6 +158,9 @@ def dumpHtml(argHTML,argTitle,argPageID):
         origEmoticonPath = e['src']
         myEmoticonPath = "emoticons/" + myEmoticonTitle
         e['src'] = myEmoticonPath
+    #
+    # When the file is the report
+    #
     prettyHTML = soup.prettify()
     f = open(htmlFilePath, 'w')
     f.write(htmlPageHeader)
@@ -150,10 +179,27 @@ def setPageHeader(argTitle,argURL):
     """
     return(myHeader)
 
-myBodyExportView = getBodyExportView(pageID).json()
-myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']
-myBodyExportViewName = getPageName(pageID)
-myBodyExportViewTitle = myBodyExportView['title']
-myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
-htmlPageHeader = setPageHeader(myBodyExportViewTitle,myPageURL)
-dumpHtml(myBodyExportViewHtml,myBodyExportViewTitle,pageID)
+
+# Get Page Properties REPORT
+myReportBodyExportView = getBodyExportView(pageID).json()
+myReportExportViewTitle = myReportBodyExportView['title']
+myReportExportViewHtml = myReportBodyExportView['body']['export_view']['value']
+myReportExportViewName = getPageName(pageID)
+myPageURL = str(myReportBodyExportView['_links']['base']) + str(myReportBodyExportView['_links']['webui'])
+htmlPageHeader = setPageHeader(myReportExportViewTitle,myPageURL)
+#dumpHtml(myReportExportViewHtml,myReportExportViewTitle,pageID,"report")         # not generating an HTML for report just yet
+
+getPagePropertiesChildren(myReportExportViewHtml)                                  # get list of all page properties children
+
+# Get Page Properties CHILDREN
+for p in myPagePropertiesChildren:
+    myBodyExportView = getBodyExportView(p).json()
+    myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']
+    myBodyExportViewName = myPagePropertiesChildrenDict[p]['Name']
+    myBodyExportViewTitle = myBodyExportView['title']
+    myBodyExportViewTitle = myBodyExportViewTitle.replace("/","-")
+    myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
+    htmlPageHeader = setPageHeader(myBodyExportViewTitle,myPageURL)
+    dumpHtml(myBodyExportViewHtml,myBodyExportViewTitle,p,"child")                  # creates html files for every child
+
+dumpHtml(myReportExportViewHtml,myReportExportViewTitle,pageID,"report")         # finally creating the HTML for the report page

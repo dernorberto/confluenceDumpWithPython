@@ -45,7 +45,7 @@ if not os.path.exists(outdirStyles):
     os.mkdir(outdirStyles)
 
 if not os.path.exists(outdirStyles + '/site.css'):
-    os.popen('cp ' + base_outdir + '/styles/site.css ' + outdirStyles)
+    os.system('cp ' + base_outdir + '/styles/site.css "' + outdirStyles + '"')
 
 def getPagesByLabel():
   url = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/search?cql=type=page AND label=\'' + pageLabel + '\''
