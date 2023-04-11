@@ -55,7 +55,7 @@ if not os.path.exists(outdirStyles):
     os.mkdir(outdirStyles)
 
 if not os.path.exists(str(outdirStyles) + '/site.css'):
-    os.system('cp ' + base_outdir + '/styles/site.css "' + outdirStyles + '"')
+    os.system('cp ' + currentdir + '/styles/site.css "' + outdirStyles + '"')
 
 myPagePropertiesChildren = []
 myPagePropertiesChildrenDict = {}
