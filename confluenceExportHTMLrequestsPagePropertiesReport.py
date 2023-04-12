@@ -73,6 +73,7 @@ def getPagePropertiesChildren(argHTML):
         myPagePropertiesChildrenDict[myPageID].update({"ID": myPageID})
         myPagePropertiesChildrenDict[myPageID].update({"Name": myPageName})
     print(str(myPagePropertiesItemsCounter) + " Pages")
+    print("Exporting to: " + outdir)
     return(myPagePropertiesChildrenDict)
 
 myAttachmentsList = []
@@ -102,7 +103,7 @@ htmlPageHeader = """    <head>
     </head>
 """
 
-def dumpHtml(argHTML,argTitle,argPageID,argType):
+def dumpHtml(argHTML,argTitle,argURL,argPageID,argType):
     soup = bs(argHTML, "html.parser")
     htmlFileName = str(argTitle) + '.html'
     htmlFilePath = os.path.join(outdir,htmlFileName)
@@ -127,7 +128,7 @@ def dumpHtml(argHTML,argTitle,argPageID,argType):
         myAttachmentPath = os.path.join(outdirAttach,attachmentName)
         toDownload = requests.get(origAttachmentPath, allow_redirects=True)
         open(myAttachmentPath,'wb').write(toDownload.content)
-        print(myAttachmentPath)
+        #print(myAttachmentPath)            # not printing path to exported embeds
         n['width'] = "1024px"
         n['height'] = "auto"
         n['onclick'] = "window.open(\"" + myAttachmentPath + "\")"
@@ -143,12 +144,12 @@ def dumpHtml(argHTML,argTitle,argPageID,argType):
         attachmentName = attachmentName.rsplit('?')[0]
         origAttachmentPath = 'https://' + atlassianSite + '.atlassian.net/wiki/download/attachments/' + str(argPageID) + '/' + attachmentName
         myAttachmentPath =  "attachments/" + attachmentName
-        print(myAttachmentPath)
+        #print(myAttachmentPath)            # not printing path to exported embeds
         n['src'] = myAttachmentPath
     #
     # dealing with "emoticon"
     #
-    myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or
+    myEmoticons = soup.findAll('img',class_="emoticon")      # any emoticon like atlassian-check_mark
     for e in myEmoticons:
         requestEmoticons = requests.get(e['src'], auth=(userName, apiToken))
         myEmoticonTitle = e['src']
@@ -161,12 +162,13 @@ def dumpHtml(argHTML,argTitle,argPageID,argType):
     #
     # When the file is the report
     #
+    htmlPageHeader = setPageHeader(argTitle,argURL)         # dealing with page header
     prettyHTML = soup.prettify()
     f = open(htmlFilePath, 'w')
     f.write(htmlPageHeader)
     f.write(prettyHTML)
     f.close()
-    print("Exported file " + htmlFilePath)
+    print("Exported file: " + htmlFileName)
 
 def setPageHeader(argTitle,argURL):
     myHeader = """    <head>
@@ -185,21 +187,17 @@ myReportBodyExportView = getBodyExportView(pageID).json()
 myReportExportViewTitle = myReportBodyExportView['title']
 myReportExportViewHtml = myReportBodyExportView['body']['export_view']['value']
 myReportExportViewName = getPageName(pageID)
-myPageURL = str(myReportBodyExportView['_links']['base']) + str(myReportBodyExportView['_links']['webui'])
-htmlPageHeader = setPageHeader(myReportExportViewTitle,myPageURL)
-#dumpHtml(myReportExportViewHtml,myReportExportViewTitle,pageID,"report")         # not generating an HTML for report just yet
-
+myReportExportPageURL = str(myReportBodyExportView['_links']['base']) + str(myReportBodyExportView['_links']['webui'])
 getPagePropertiesChildren(myReportExportViewHtml)                                  # get list of all page properties children
 
 # Get Page Properties CHILDREN
 for p in myPagePropertiesChildren:
-    myBodyExportView = getBodyExportView(p).json()
-    myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']
-    myBodyExportViewName = myPagePropertiesChildrenDict[p]['Name']
-    myBodyExportViewTitle = myBodyExportView['title']
-    myBodyExportViewTitle = myBodyExportViewTitle.replace("/","-")
-    myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
-    htmlPageHeader = setPageHeader(myBodyExportViewTitle,myPageURL)
-    dumpHtml(myBodyExportViewHtml,myBodyExportViewTitle,p,"child")                  # creates html files for every child
+    myChildExportView = getBodyExportView(p).json()
+    myChildExportViewHtml = myChildExportView['body']['export_view']['value']
+    myChildExportViewName = myPagePropertiesChildrenDict[p]['Name']
+    myChildExportViewTitle = myChildExportView['title']
+    myChildExportViewTitle = myChildExportViewTitle.replace("/","-")
+    myChildExportPageURL = str(myChildExportView['_links']['base']) + str(myChildExportView['_links']['webui'])
+    dumpHtml(myChildExportViewHtml,myChildExportViewTitle,myChildExportPageURL,p,"child")                  # creates html files for every child
 
-dumpHtml(myReportExportViewHtml,myReportExportViewTitle,pageID,"report")         # finally creating the HTML for the report page
+dumpHtml(myReportExportViewHtml,myReportExportViewTitle,myReportExportPageURL,pageID,"report")         # finally creating the HTML for the report page
