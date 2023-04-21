@@ -10,7 +10,8 @@ Purpose of the files:
 2. `confluenceExportHTMLrequestsSingle.py`: download a single page by supplying the page ID as an argument.
 3. `confluenceExportHTMLrequestsPagePropertiesReport.py`: download page properties and all the pages in the report by supplying the page ID as an argument.
 
-For CSS Styling, it uses the `site.css` file that Confluence gnerates when exporting in HTML.
+For CSS Styling, it uses the `site.css` from Confluence that can be obtained by using the Workaround described in: https://jira.atlassian.com/browse/CONFSERVER-40907
+The 'site.css' file included with HTML exports is not as complete as the one above.
 
 Folder and file structure:
 
@@ -60,19 +61,19 @@ Folder and file structure:
 * How to download based on a page label.
 
 ```
-confluenceExportHTMLrequestsByLabel.py <site Name> <page Label of all pages to download>
+confluenceExportHTMLrequestsByLabel.py <site Name> <page Label of all pages to download> [<output folder>]
 ```
 
 * How to download a single page based on its ID.
 
 ```
-confluenceExportHTMLrequestsSingle.py <site Name> <ID of page to dump>
+confluenceExportHTMLrequestsSingle.py <site Name> <ID of page to dump> [<output folder>]
 ```
 
 * How to download Page Properties and all the contained pages.
 
 ```
-confluenceExportHTMLrequestsPagePropertiesReport.py <site Name> <ID of page properties report page>
+confluenceExportHTMLrequestsPagePropertiesReport.py <site Name> <ID of page properties report page> [<output folder>]
 ```
 
 ## Help
@@ -96,6 +97,10 @@ Contributors names and contact info
 
 ## Version History
 
+* 1.2
+  * Added better HTML header and footer.
+  * Added page labels to HTML headers.
+  * Improved output folder argument logic.
 * 1.1
   * Added Papge Properties dump and other smaller things
 * 1.0
