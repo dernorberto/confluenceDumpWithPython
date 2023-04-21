@@ -14,24 +14,34 @@ userName = os.environ["atlassianUserEmail"]
 
 try:
     atlassianSite = sys.argv[1]
-except IndexError:
-    raise SystemExit(f"Usage: {sys.argv[0]} <label>")
+except IndexError as exc:
+    raise SystemExit(f"Options: <site> <page label> <output folder>") from exc
 print('Site: ' + atlassianSite)
 
 try:
     pageLabel = sys.argv[2]
-except IndexError:
-    raise SystemExit(f"Usage: <site> {sys.argv[1]} ")
+except IndexError as exc:
+    raise SystemExit(f"Options: <site> <page label> <output folder>") from exc
 print('Label: ' + pageLabel)
 
+currentDir = os.getcwd()
+scriptDir = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    outdir = sys.argv[3]
+except IndexError as exc:
+    outdir = os.path.join(scriptDir,"output")
+    outdir = os.path.join(outdir,pageLabel)
+    print('No output folder supplied, using script path: ' + outdir)
+else:
+    outdir = os.path.join(outdir,pageLabel)
+
 # Create the output folders
-currentdir = os.getcwd()
-base_outdir = os.path.join(currentdir,"output")
-outdir = os.path.join(currentdir,"output")
-outdir = os.path.join(outdir,pageLabel)             # adding /<pageLabel> as a path under /output
+
 outdirAttach = os.path.join(outdir,"attachments")
 outdirEmoticons = os.path.join(outdir,"emoticons")
 outdirStyles = os.path.join(outdir,"styles")
+
 if not os.path.exists(outdir):
     os.mkdir(outdir)
 
@@ -45,37 +55,37 @@ if not os.path.exists(outdirStyles):
     os.mkdir(outdirStyles)
 
 if not os.path.exists(outdirStyles + '/site.css'):
-    os.system('cp ' + base_outdir + '/styles/site.css "' + outdirStyles + '"')
+    os.system('cp ' + scriptDir + '/styles/site.css "' + outdirStyles + '"')
 
 def getPagesByLabel():
-  url = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/search?cql=type=page AND label=\'' + pageLabel + '\''
-  auth = HTTPBasicAuth(userName, apiToken)
-  headers = {
-    "Accept": "application/json"
-  }
-  query = {
-    'cql': '{cql}'
-  }
-  response = requests.request(
-    "GET",
-    url,
-    headers=headers,
-    params=query,
-    auth=auth
-  )
-  return response.json()['results']
+    url = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/search?cql=type=page AND label=\'' + pageLabel + '\''
+    auth = HTTPBasicAuth(userName, apiToken)
+    headers = { "Accept": "application/json" }
+    query = {'cql': '{cql}'}
+    response = requests.request("GET", url, headers=headers, params=query, auth=auth, timeout=30)
+    return response.json()['results']
+
+# get page labels
+def getPageLabels(argPageID):
+    htmlLabels = []
+    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/api/v2/pages/' + str(argPageID) + '/labels'
+    response = requests.get(serverURL, auth=(userName, apiToken),timeout=30).json()
+    for l in response['results']:
+        htmlLabels.append(l['name'])
+    #htmlLabels = ",".join(htmlLabels)
+    return(htmlLabels)
 
 def getIDs(myResults):
-  myListOfIDs = []
-  for n in myResults:
-      myListOfIDs.append(n['content']['id'])
-  return myListOfIDs
+    myListOfIDs = []
+    for n in myResults:
+        myListOfIDs.append(n['content']['id'])
+    return myListOfIDs
 
 def getTitles(myResults):
-  myListOfTitles = []
-  for n in myResults:
-      myListOfTitles.append(n['content']['title'])
-  return myListOfTitles
+    myListOfTitles = []
+    for n in myResults:
+        myListOfTitles.append(n['content']['title'])
+    return myListOfTitles
 
 myPages = getPagesByLabel()
 myPageIDs = getIDs(myPages)
@@ -140,26 +150,36 @@ def dumpHtml(argHTML,argTitle,argPageID):
     f = open(htmlFilePath, 'w')
     f.write(htmlPageHeader)
     f.write(prettyHTML)
+    f.write(footersHTML)
     f.close()
     print('Created: ' + str(htmlFileName))
 
-def setPageHeader(argTitle,argURL):
-    myHeader = """    <head>
-        <title>""" + argTitle + """</title>
-        <link rel="stylesheet" href="styles/site.css" type="text/css" />
-        <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    </head>
-    <h2>""" + argTitle + """</h2>
-    <p>Original URL: <a href=\"""" + argURL + """\"> """+argTitle+"""</a><hr>
-    """
+
+def setPageHeader(argTitle,argURL,argLabels):
+    myHeader = """<html>
+<head>
+<title>""" + argTitle + """</title>
+<link rel="stylesheet" href="styles/site.css" type="text/css" />
+<meta name="generator" content="confluenceExportHTML" />
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="labels" content=\"""" + str(argLabels) + """\">
+</head>
+<body>
+<h2>""" + argTitle + """</h2>
+<p>Original URL: <a href=\"""" + argURL + """\"> """+argTitle+"""</a><hr>"""
     return(myHeader)
 
+footersHTML = """</body>
+</html>"""
 
 for p in myPageIDs:
     myBodyExportView = getBodyExportView(p).json()
     myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']
     myBodyExportViewName = getPageName(p)
     myBodyExportViewTitle = myBodyExportView['title']
+    myBodyExportViewTitle = myBodyExportViewTitle.replace("/","-")
+    myBodyExportViewLabels = getPageLabels(p)
+    myBodyExportViewLabels = ",".join(myBodyExportViewLabels)
     myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
-    htmlPageHeader = setPageHeader(myBodyExportViewTitle,myPageURL)
+    htmlPageHeader = setPageHeader(myBodyExportViewTitle,myPageURL,myBodyExportViewLabels)
     dumpHtml(myBodyExportViewHtml,myBodyExportViewTitle,p)
