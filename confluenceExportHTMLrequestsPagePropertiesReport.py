@@ -58,9 +58,9 @@ else:
 
 # Create the output folders
 
-outdirAttach = os.path.join(outdir,"attachments")
-outdirEmoticons = os.path.join(outdir,"emoticons")
-outdirStyles = os.path.join(outdir,"styles")
+outdirAttach = os.path.join(outdir,"images")
+outdirEmoticons = os.path.join(outdir,"images")
+outdirStyles = os.path.join(outdir,"_static")
 
 if not os.path.exists(outdir):
     os.mkdir(outdir)
@@ -75,7 +75,7 @@ if not os.path.exists(outdirStyles):
     os.mkdir(outdirStyles)
 
 if not os.path.exists(str(outdirStyles) + '/site.css'):
-    os.system('cp ' + currentdir + '/styles/site.css "' + outdirStyles + '"')
+    os.system('cp ' + currentDir + '/styles/site.css "' + outdirStyles + '"')
 
 myPagePropertiesChildren = []
 myPagePropertiesChildrenDict = {}

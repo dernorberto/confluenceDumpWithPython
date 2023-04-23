@@ -64,9 +64,9 @@ else:
 
 # Create the output directory
 
-outdirAttach = os.path.join(outdir,"attachments")
-outdirEmoticons = os.path.join(outdir,"emoticons")
-outdirStyles = os.path.join(outdir,"styles")
+outdirAttach = os.path.join(outdir,"images")
+outdirEmoticons = os.path.join(outdir,"images")
+outdirStyles = os.path.join(outdir,"_static")
 
 if not os.path.exists(outdir):
     os.mkdir(outdir)

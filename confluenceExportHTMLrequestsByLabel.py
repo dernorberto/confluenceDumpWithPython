@@ -24,6 +24,8 @@ except IndexError as exc:
     raise SystemExit(f"Options: <site> <page label> <output folder>") from exc
 print('Label: ' + pageLabel)
 
+
+
 currentDir = os.getcwd()
 scriptDir = os.path.dirname(os.path.abspath(__file__))
 
@@ -38,9 +40,9 @@ else:
 
 # Create the output folders
 
-outdirAttach = os.path.join(outdir,"attachments")
-outdirEmoticons = os.path.join(outdir,"emoticons")
-outdirStyles = os.path.join(outdir,"styles")
+outdirAttach = os.path.join(outdir,"images")
+outdirEmoticons = os.path.join(outdir,"images")
+outdirStyles = os.path.join(outdir,"_static")
 
 if not os.path.exists(outdir):
     os.mkdir(outdir)
