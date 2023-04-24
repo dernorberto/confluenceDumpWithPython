@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup as bs
 import sys
 import pypandoc
 from PIL import Image
-
+import re
 
 apiToken = os.environ["atlassianAPIToken"]
 userName = os.environ["atlassianUserEmail"]
@@ -151,7 +151,8 @@ def dumpHtml(argHTML,argTitle,argPageID):
     #
     # dealing with "confluence-embedded-image"
     #
-    myEmbeds = soup.findAll('img',class_="confluence-embedded-image")
+    myEmbeds = soup.findAll('img',class_=re.compile("^confluence-embedded-image"))
+
     print(str(len(myEmbeds)) + " embedded images.")
     for embed in myEmbeds:
         origEmbedPath = embed['src']
