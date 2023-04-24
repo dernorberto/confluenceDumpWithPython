@@ -8,6 +8,8 @@ import json
 from requests.auth import HTTPBasicAuth
 from bs4 import BeautifulSoup as bs
 import sys
+import pypandoc
+from PIL import Image
 
 
 apiToken = os.environ["atlassianAPIToken"]
@@ -25,13 +27,13 @@ except IndexError:
     raise SystemExit(f"Usage:<script>.py <site> {sys.argv[2]}")
 print('Page ID: ' + pageID)
 
-def getBodyExportView(pageid):
-    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageID) + '?expand=body.export_view'
+def getBodyExportView(argPageID):
+    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID) + '?expand=body.export_view'
     response = requests.get(serverURL, auth=(userName, apiToken))
     return(response)
 
-def getPageName(pageid):
-    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageid)
+def getPageName(argPageID):
+    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID)
     r_pagetree = requests.get(serverURL, auth=(userName, apiToken))
     return(r_pagetree.json()['id'] + "_" + r_pagetree.json()['title'])
 
@@ -49,24 +51,28 @@ myBodyExportView = getBodyExportView(pageID).json()
 myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']
 myBodyExportViewTitle = myBodyExportView['title']
 myBodyExportViewTitle = myBodyExportViewTitle.replace("/","-")
-
+#
+# Handling output folder path
+#
 currentDir = os.getcwd()
 scriptDir = os.path.dirname(os.path.abspath(__file__))
-
 try:
     outdir = sys.argv[3]
 except IndexError as exc:
     outdir = os.path.join(scriptDir,"output")
     outdir = os.path.join(outdir,str(pageID) + " - " + str(myBodyExportViewTitle))
-    print('No output folder supplied, using script path: ' + outdir)
+    print('No output folder supplied, using current path: ' + outdir)
 else:
     outdir = os.path.join(outdir,str(pageID) + " - " + str(myBodyExportViewTitle))
-
-# Create the output directory
-
-outdirAttach = os.path.join(outdir,"images")
-outdirEmoticons = os.path.join(outdir,"images")
-outdirStyles = os.path.join(outdir,"_static")
+#
+# Create the output folders, set to match Sphynx structure
+#
+attachDir = "_images/"
+emoticonsDir = "_images/"
+stylesDir = "_static/"
+outdirAttach = os.path.join(outdir,attachDir)
+outdirEmoticons = os.path.join(outdir,emoticonsDir)
+outdirStyles = os.path.join(outdir,stylesDir)
 
 if not os.path.exists(outdir):
     os.mkdir(outdir)
@@ -83,18 +89,18 @@ if not os.path.exists(outdirStyles):
 if not os.path.exists(outdirStyles + '/site.css'):
     os.system('cp ' + scriptDir + '/styles/site.css "' + outdirStyles + '"')
 
-def getBodyExportView(pageid):
-    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageID) + '?expand=body.export_view'
+def getBodyExportView(argPageID):
+    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID) + '?expand=body.export_view'
     response = requests.get(serverURL, auth=(userName, apiToken))
     return(response)
 
-myAttachmentsList = []
-def getAttachments(pageid):
-    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(pageID) + '?expand=children.attachment'
+def getAttachments(argPageID):
+    serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID) + '?expand=children.attachment'
     response = requests.get(serverURL, auth=(userName, apiToken))
     myAttachments = response.json()['children']['attachment']['results']
     for n in myAttachments:
         myTitle = n['title']
+        myTitle = myTitle.replace(":","-").replace(" ","_").replace("%20","_")
         myTail = n['_links']['download']
         url = 'https://' + atlassianSite + '.atlassian.net/wiki' + myTail
         requestAttachment = requests.get(url, auth=(userName, apiToken),allow_redirects=True)
@@ -104,31 +110,20 @@ def getAttachments(pageid):
         open(filePath, 'wb').write(requestAttachment.content)
         myAttachmentsList.append(myTitle)
     return(myAttachmentsList)
-
-
-htmlPageHeader = """    <head>
-        <title>python title TODO</title>
-        <link rel="stylesheet" href="styles/site.css" type="text/css" />
-        <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    </head>
-"""
-
-def setHTMLHeader(argTitle,argLabels):
-    headersHTML = """<html>
-<head>
-<meta charset="utf-8" />
-<meta name="generator" content="confluenceExportHTML" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-<meta name="labels" content=\"""" + argLabels + """\">
-<title>""" + argTitle + """</title>
-<link rel="stylesheet" type="text/css" href="site.css" media="screen" />
-</head>
-<body>"""
-    return(headersHTML)
-
+#
+# Define HTML page footer
+#
 footersHTML = """</body>
 </html>"""
-
+#
+# Clear all lists (just in case)
+#
+myAttachments = []
+myAttachmentsList = []
+myEmbeds = []
+myEmbedsExternals = []
+myEmoticons = []
+myEmoticonsList = []
 def dumpHtml(argHTML,argTitle,argPageID):
     soup = bs(argHTML, "html.parser")
     htmlFileName = str(argTitle) + '.html'
@@ -139,58 +134,84 @@ def dumpHtml(argHTML,argTitle,argPageID):
     #
     myEmbedsExternals = soup.findAll('img',class_="confluence-embedded-image confluence-external-resource")
     myEmbedsExternalsCounter = 0
-    for n in myEmbedsExternals:
-        origAttachmentPath = n['src']
-        attachmentName = origAttachmentPath.rsplit('/',1)[-1]
-        attachmentName = attachmentName.rsplit('?')[0]
-        attachmentName = str(argPageID) + "-" + str(myEmbedsExternalsCounter) + "-" + attachmentName
-        myAttachmentPath = os.path.join(outdirAttach,attachmentName)
-        toDownload = requests.get(origAttachmentPath, allow_redirects=True)
-        open(myAttachmentPath,'wb').write(toDownload.content)
-        print(myAttachmentPath)
-        n['width'] = "1024px"
-        n['height'] = "auto"
-        n['onclick'] = "window.open(\"" + myAttachmentPath + "\")"
-        n['src'] = myAttachmentPath
+    for embedExt in myEmbedsExternals:
+        origEmbedExternalPath = embedExt['src']
+        origEmbedExternalName = origEmbedExternalPath.rsplit('/',1)[-1].rsplit('?')[0]
+        origEmbedExternalName = str(argPageID) + "-" + str(myEmbedsExternalsCounter) + "-" + origEmbedExternalName
+        myEmbedExternalPath = os.path.join(outdirAttach,origEmbedExternalName)
+        toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
+        myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace(" ","_").replace("%20","_")
+        open(myEmbedExternalPath,'wb').write(toDownload.content)
+        print(myEmbedExternalPath)
+        embedExt['width'] = "1024px"
+        embedExt['height'] = "auto"
+        embedExt['onclick'] = "window.open(\"" + myEmbedExternalPath + "\")"
+        embedExt['src'] = myEmbedExternalPath
         myEmbedsExternalsCounter = myEmbedsExternalsCounter + 1
     #
     # dealing with "confluence-embedded-image"
     #
     myEmbeds = soup.findAll('img',class_="confluence-embedded-image")
-    for n in myEmbeds:
-        origAttachmentPath = n['src']
-        attachmentName = origAttachmentPath.rsplit('/',1)[-1]
-        attachmentName = attachmentName.rsplit('?')[0]
-        origAttachmentPath = 'https://' + atlassianSite + '.atlassian.net/wiki/download/attachments/' + str(argPageID) + '/' + attachmentName
-        myAttachmentPath =  "attachments/" + attachmentName
-        print(myAttachmentPath)
-        n['src'] = myAttachmentPath
+    print(str(len(myEmbeds)) + " embedded images.")
+    for embed in myEmbeds:
+        origEmbedPath = embed['src']
+        origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]
+        myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_")
+        myEmbedPath = attachDir + myEmbedName
+        myEmbedPathFull = os.path.join(outdir,myEmbedPath)
+        print("Embed path: " + myEmbedPath)
+        img = Image.open(myEmbedPathFull)
+        if img.width < 600:
+            embed['width'] = img.width
+        else:
+            embed['width'] = 600
+        img.close
+        embed['height'] = "auto"
+        embed['onclick'] = "window.open(\"" + myEmbedPath + "\")"
+        embed['src'] = myEmbedPath
     #
     # dealing with "emoticon"
     #
     myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or
-    for e in myEmoticons:
-        requestEmoticons = requests.get(e['src'], auth=(userName, apiToken))
-        myEmoticonTitle = e['src']
-        myEmoticonTitle = myEmoticonTitle.rsplit('/',1)[-1]
-        filePath = os.path.join(outdirEmoticons,myEmoticonTitle)
-        open(filePath, 'wb').write(requestEmoticons.content)
-        origEmoticonPath = e['src']
-        myEmoticonPath = "emoticons/" + myEmoticonTitle
-        e['src'] = myEmoticonPath
+    print(str(len(myEmoticons)) + " emoticons.")
+    for emoticon in myEmoticons:
+        requestEmoticons = requests.get(emoticon['src'], auth=(userName, apiToken))
+        myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]
+        if myEmoticonTitle not in myEmoticonsList:
+            myEmoticonsList.append(myEmoticonTitle)
+            print("Getting emoticon: " + myEmoticonTitle)
+            filePath = os.path.join(outdirEmoticons,myEmoticonTitle)
+            open(filePath, 'wb').write(requestEmoticons.content)
+        myEmoticonPath = emoticonsDir + myEmoticonTitle
+        emoticon['src'] = myEmoticonPath
+    #
+    # Putting HTML together
+    #
     prettyHTML = soup.prettify()
-    f = open(htmlFilePath, 'w')
-    f.write(htmlPageHeader)
-    f.write(prettyHTML)
-    f.write(footersHTML)
-    f.close()
-    print("Exported file " + htmlFilePath)
-
+    htmlFile = open(htmlFilePath, 'w')
+    htmlFile.write(htmlPageHeader)
+    htmlFile.write(prettyHTML)
+    htmlFile.write(footersHTML)
+    htmlFile.close()
+    print("Exported HTML file " + htmlFileName)
+    #
+    # convert html to rst
+    #
+    rstFileName = str(argTitle) + '.rst'
+    rstFilePath = os.path.join(outdir,rstFileName)
+    outputRST = pypandoc.convert_file(str(htmlFilePath), 'rst', format='html',extra_args=['--wrap=none'])
+    rstFile = open(rstFilePath, 'w')
+    rstFile.write(outputRST)
+    rstFile.close()
+    print("Exported RST file: " + rstFileName)
+#
+# Define HTML page header
+#
 def setPageHeader(argTitle,argURL,argLabels):
     myHeader = """<html>
 <head>
 <title>""" + argTitle + """</title>
-<link rel="stylesheet" href="styles/site.css" type="text/css" />
+<link rel="stylesheet" href=\"""" + stylesDir + """site.css" type="text/css" />
 <meta name="generator" content="confluenceExportHTML" />
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="labels" content=\"""" + str(argLabels) + """\">
@@ -199,8 +220,11 @@ def setPageHeader(argTitle,argURL,argLabels):
 <h2>""" + argTitle + """</h2>
 <p>Original URL: <a href=\"""" + argURL + """\"> """+argTitle+"""</a><hr>"""
     return(myHeader)
-
+#
+# Start processing the page to dowload
+#
 myBodyExportViewName = getPageName(pageID)
+print("Page name: " + myBodyExportViewTitle)
 myBodyExportViewLabels = getPageLabels(pageID)
 myBodyExportViewLabels = ",".join(myBodyExportViewLabels)
 myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
