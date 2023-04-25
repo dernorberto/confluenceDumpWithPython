@@ -34,7 +34,7 @@ def getBodyExportView(argPageID):
 
 def getPageName(argPageID):
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID)
-    r_pagetree = requests.get(serverURL, auth=(userName, apiToken))
+    r_pagetree = requests.get(serverURL, auth=(userName, apiToken),timeout=30)
     return(r_pagetree.json()['id'] + "_" + r_pagetree.json()['title'])
 
 # get page labels
@@ -56,6 +56,7 @@ myBodyExportViewTitle = myBodyExportViewTitle.replace("/","-")
 #
 currentDir = os.getcwd()
 scriptDir = os.path.dirname(os.path.abspath(__file__))
+
 try:
     outdir = sys.argv[3]
 except IndexError as exc:
@@ -103,7 +104,7 @@ def getAttachments(argPageID):
         myTitle = myTitle.replace(":","-").replace(" ","_").replace("%20","_")          # replace offending characters from file name
         myTail = n['_links']['download']
         url = 'https://' + atlassianSite + '.atlassian.net/wiki' + myTail
-        requestAttachment = requests.get(url, auth=(userName, apiToken),allow_redirects=True)
+        requestAttachment = requests.get(url, auth=(userName, apiToken),allow_redirects=True,timeout=30)
         filePath = os.path.join(outdirAttach,myTitle)
         #if (requestAttachment.content.decode("utf-8")).startswith("<!doctype html>"):
         #    filePath = str(filePath) + ".html"
@@ -140,10 +141,18 @@ def dumpHtml(argHTML,argTitle,argPageID):
         origEmbedExternalName = str(argPageID) + "-" + str(myEmbedsExternalsCounter) + "-" + origEmbedExternalName
         myEmbedExternalPath = os.path.join(outdirAttach,origEmbedExternalName)
         toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
-        myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace(" ","_").replace("%20","_")      # replace offending characters from file name
-        open(myEmbedExternalPath,'wb').write(toDownload.content)
-        print(myEmbedExternalPath)
-        embedExt['width'] = "1024px"
+        myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace("%20"," ")      # replace offending characters from file name
+        try:
+            open(myEmbedExternalPath,'wb').write(toDownload.content)
+        except:
+            print(origEmbedExternalPath)
+        print("Embed External path: " + str(myEmbedExternalPath))
+        img = Image.open(myEmbedExternalPath)
+        if img.width < 600:
+            embedExt['width'] = img.width
+        else:
+            embedExt['width'] = 600
+        img.close
         embedExt['height'] = "auto"
         embedExt['onclick'] = "window.open(\"" + myEmbedExternalPath + "\")"
         embedExt['src'] = myEmbedExternalPath
@@ -152,7 +161,6 @@ def dumpHtml(argHTML,argTitle,argPageID):
     # dealing with "confluence-embedded-image"
     #
     myEmbeds = soup.findAll('img',class_=re.compile("^confluence-embedded-image"))
-
     print(str(len(myEmbeds)) + " embedded images.")
     for embed in myEmbeds:
         origEmbedPath = embed['src']
@@ -200,7 +208,7 @@ def dumpHtml(argHTML,argTitle,argPageID):
     #
     rstFileName = str(argTitle) + '.rst'
     rstFilePath = os.path.join(outdir,rstFileName)
-    outputRST = pypandoc.convert_file(str(htmlFilePath), 'rst', format='html',extra_args=['--wrap=none','--list-tables'])
+    outputRST = pypandoc.convert_file(str(htmlFilePath), 'rst', format='html',extra_args=['--standalone','--wrap=none','--list-tables'])
     rstPageHeader = setRstHeader(myBodyExportViewLabels)
     rstFile = open(rstFilePath, 'w')
     rstFile.write(rstPageHeader)            # assing .. tags:: to rst file for future reference
@@ -227,8 +235,7 @@ def setHtmlHeader(argTitle,argURL,argLabels):
 # Define RST file header
 #
 def setRstHeader(argLabels):
-    myHeader = """
-.. tags:: """ + str(argLabels) + """
+    myHeader = """.. tags:: """ + str(argLabels) + """
 
 """
     return(myHeader)
@@ -237,8 +244,7 @@ def setRstHeader(argLabels):
 #
 myBodyExportViewName = getPageName(pageID)
 print("Page name: " + myBodyExportViewTitle)
-myBodyExportViewLabels = getPageLabels(pageID)
-myBodyExportViewLabels = ",".join(myBodyExportViewLabels)
+myBodyExportViewLabels = ",".join(getPageLabels(pageID))
 myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
 htmlPageHeader = setHtmlHeader(myBodyExportViewTitle,myPageURL,myBodyExportViewLabels)
 dumpHtml(myBodyExportViewHtml,myBodyExportViewTitle,pageID)
