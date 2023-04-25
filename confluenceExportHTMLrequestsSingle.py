@@ -100,7 +100,7 @@ def getAttachments(argPageID):
     myAttachments = response.json()['children']['attachment']['results']
     for n in myAttachments:
         myTitle = n['title']
-        myTitle = myTitle.replace(":","-").replace(" ","_").replace("%20","_")
+        myTitle = myTitle.replace(":","-").replace(" ","_").replace("%20","_")          # replace offending characters from file name
         myTail = n['_links']['download']
         url = 'https://' + atlassianSite + '.atlassian.net/wiki' + myTail
         requestAttachment = requests.get(url, auth=(userName, apiToken),allow_redirects=True)
@@ -140,7 +140,7 @@ def dumpHtml(argHTML,argTitle,argPageID):
         origEmbedExternalName = str(argPageID) + "-" + str(myEmbedsExternalsCounter) + "-" + origEmbedExternalName
         myEmbedExternalPath = os.path.join(outdirAttach,origEmbedExternalName)
         toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
-        myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace(" ","_").replace("%20","_")
+        myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace(" ","_").replace("%20","_")      # replace offending characters from file name
         open(myEmbedExternalPath,'wb').write(toDownload.content)
         print(myEmbedExternalPath)
         embedExt['width'] = "1024px"
@@ -157,7 +157,7 @@ def dumpHtml(argHTML,argTitle,argPageID):
     for embed in myEmbeds:
         origEmbedPath = embed['src']
         origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]
-        myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_")
+        myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_")        # replace offending characters from file name
         myEmbedPath = attachDir + myEmbedName
         myEmbedPathFull = os.path.join(outdir,myEmbedPath)
         print("Embed path: " + myEmbedPath)
@@ -200,15 +200,17 @@ def dumpHtml(argHTML,argTitle,argPageID):
     #
     rstFileName = str(argTitle) + '.rst'
     rstFilePath = os.path.join(outdir,rstFileName)
-    outputRST = pypandoc.convert_file(str(htmlFilePath), 'rst', format='html',extra_args=['--wrap=none'])
+    outputRST = pypandoc.convert_file(str(htmlFilePath), 'rst', format='html',extra_args=['--wrap=none','--list-tables'])
+    rstPageHeader = setRstHeader(myBodyExportViewLabels)
     rstFile = open(rstFilePath, 'w')
+    rstFile.write(rstPageHeader)            # assing .. tags:: to rst file for future reference
     rstFile.write(outputRST)
     rstFile.close()
     print("Exported RST file: " + rstFileName)
 #
 # Define HTML page header
 #
-def setPageHeader(argTitle,argURL,argLabels):
+def setHtmlHeader(argTitle,argURL,argLabels):
     myHeader = """<html>
 <head>
 <title>""" + argTitle + """</title>
@@ -222,6 +224,15 @@ def setPageHeader(argTitle,argURL,argLabels):
 <p>Original URL: <a href=\"""" + argURL + """\"> """+argTitle+"""</a><hr>"""
     return(myHeader)
 #
+# Define RST file header
+#
+def setRstHeader(argLabels):
+    myHeader = """
+.. tags:: """ + str(argLabels) + """
+
+"""
+    return(myHeader)
+#
 # Start processing the page to dowload
 #
 myBodyExportViewName = getPageName(pageID)
@@ -229,5 +240,5 @@ print("Page name: " + myBodyExportViewTitle)
 myBodyExportViewLabels = getPageLabels(pageID)
 myBodyExportViewLabels = ",".join(myBodyExportViewLabels)
 myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
-htmlPageHeader = setPageHeader(myBodyExportViewTitle,myPageURL,myBodyExportViewLabels)
+htmlPageHeader = setHtmlHeader(myBodyExportViewTitle,myPageURL,myBodyExportViewLabels)
 dumpHtml(myBodyExportViewHtml,myBodyExportViewTitle,pageID)
