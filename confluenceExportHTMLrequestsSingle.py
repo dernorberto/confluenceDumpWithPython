@@ -11,6 +11,8 @@ import sys
 import pypandoc
 from PIL import Image
 import re
+#from pathvalidate import sanitize_filename
+
 
 apiToken = os.environ["atlassianAPIToken"]
 userName = os.environ["atlassianUserEmail"]
@@ -97,19 +99,21 @@ def getBodyExportView(argPageID):
 
 def getAttachments(argPageID):
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID) + '?expand=children.attachment'
-    response = requests.get(serverURL, auth=(userName, apiToken))
+    response = requests.get(serverURL, auth=(userName, apiToken),timeout=30)
     myAttachments = response.json()['children']['attachment']['results']
-    for n in myAttachments:
-        myTitle = n['title']
-        myTitle = myTitle.replace(":","-").replace(" ","_").replace("%20","_")          # replace offending characters from file name
-        myTail = n['_links']['download']
-        url = 'https://' + atlassianSite + '.atlassian.net/wiki' + myTail
-        requestAttachment = requests.get(url, auth=(userName, apiToken),allow_redirects=True,timeout=30)
-        filePath = os.path.join(outdirAttach,myTitle)
+    for attachment in myAttachments:
+        attachmentTitle = requests.utils.unquote(attachment['title'])
+        print("Downloading: " + attachmentTitle)
+        #attachmentTitle = n['title']
+        #attachmentTitle = attachmentTitle.replace(":","-").replace(" ","_").replace("%20","_")          # replace offending characters from file name
+        #myTail = n['_links']['download']
+        attachmentURL = 'https://' + atlassianSite + '.atlassian.net/wiki' + attachment['_links']['download']
+        requestAttachment = requests.get(attachmentURL, auth=(userName, apiToken),allow_redirects=True,timeout=30)
+        filePath = os.path.join(outdirAttach,attachmentTitle)
         #if (requestAttachment.content.decode("utf-8")).startswith("<!doctype html>"):
         #    filePath = str(filePath) + ".html"
-        open(filePath, 'wb').write(requestAttachment.content)
-        myAttachmentsList.append(myTitle)
+        open(os.path.join(outdirAttach,attachmentTitle), 'wb').write(requestAttachment.content)
+        myAttachmentsList.append(attachmentTitle)
     return(myAttachmentsList)
 #
 # Define HTML page footer
@@ -165,7 +169,8 @@ def dumpHtml(argHTML,argTitle,argPageID):
     for embed in myEmbeds:
         origEmbedPath = embed['src']
         origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]
-        myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_")        # replace offending characters from file name
+        myEmbedName = requests.utils.unquote(origEmbedName)
+        #myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_")        # replace offending characters from file name
         myEmbedPath = attachDir + myEmbedName
         myEmbedPathFull = os.path.join(outdir,myEmbedPath)
         print("Embed path: " + myEmbedPath)
@@ -184,6 +189,7 @@ def dumpHtml(argHTML,argTitle,argPageID):
     myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or
     print(str(len(myEmoticons)) + " emoticons.")
     for emoticon in myEmoticons:
+        print(emoticon['src'])
         requestEmoticons = requests.get(emoticon['src'], auth=(userName, apiToken))
         myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]
         if myEmoticonTitle not in myEmoticonsList:
