@@ -9,6 +9,7 @@ Purpose of the files:
 1. `confluenceExportHTMLrequestsByLabel.py`: download a set of pages based on one (or more) page Labels.
 2. `confluenceExportHTMLrequestsSingle.py`: download a single page by supplying the page ID as an argument.
 3. `confluenceExportHTMLrequestsPagePropertiesReport.py`: download page properties and all the pages in the report by supplying the page ID as an argument.
+4. `confluenceExportHTMLrequestsPagesInSpace.py`: download all pages from a space.
 
 For CSS Styling, it uses the `site.css` from Confluence that can be obtained by using the Workaround described in: https://jira.atlassian.com/browse/CONFSERVER-40907
 The 'site.css' file included with HTML exports is not as complete as the one above.
@@ -16,16 +17,14 @@ The 'site.css' file included with HTML exports is not as complete as the one abo
 Folder and file structure:
 
 * `output/<pageID>`
-  * `output/<pageID>/attachments/`
-  * `output/<pageID>/emoticons/`
-  * `output/<pageID>/styles/`
-  * Copies the file `styles/site.css` into `output/<pageID>/styles/`.
+  * `output/<pageID>/_images/`
+  * `output/<pageID>/_static/`
+  * Copies the file `styles/site.css` into `output/<site|page|label>/_static/`.
 
 ## What it does
 
-* **getPagesByLabel**: use CQL with `.../rest/api/search?cql` to search by labels.
-* **getIDs**: Gets `pageIDs` of all the found pages.
-* **getTitles**: Gets page titles of all the found pages.
+* leverages the Confluence Cloud API
+* use CQL with `.../rest/api/search?cql` to search by labels.
 * FOR loop to cycle through the `pageIDs`.
   * **getBodyExportView**: download Export View for the page `.../rest/api/content/' + str(pageid) + '?expand=body.export_view`.
   * **getAttachments**: download all Attachments from the page `.../rest/api/content/' + str(pageID) + '?expand=children.attachment`.
@@ -34,8 +33,7 @@ Folder and file structure:
   * use BS to update HTML **dumpHtml(<Page HTML>,<Page Title>,<Page ID>)**.
     * prepend a page header containing a `<head>` as well as a link to the original page.
     * download emoticons (attachments were already downloaded previously).
-    * replace `src` to local attachments/embeds.
-    * replace `src` to local emoticons.
+    * replace `src` to local attachments/embeds/emoticons
 
 ## Getting Started
 
@@ -48,6 +46,8 @@ Folder and file structure:
 * python3
   * requests
   * beautifulsoup4
+  * Pillow (handle images)
+  * pandoc & pypandoc (convert to RST)
 
 ### Installing
 
@@ -76,6 +76,12 @@ confluenceExportHTMLrequestsSingle.py <site Name> <ID of page to dump> [<output 
 confluenceExportHTMLrequestsPagePropertiesReport.py <site Name> <ID of page properties report page> [<output folder>]
 ```
 
+* How to download a whole Space.
+
+```
+confluenceExportHTMLrequestsPagesInSpace.py <site Name> <space KEY> [<output folder>]
+```
+
 ## Help
 
 No special advice other than:
@@ -91,12 +97,16 @@ Contributors names and contact info
 
 ## Improvements
 
+[ ] Update all links from downloaded pages to the local copies
+[ ] Add to headers the parent page and page labels 
 [ ] Create an index of the pages to use as a TOC.
 [ ] Create a page layout to display TOC + articles.
 [x] Copy `styles/site.css` into `output/styles/` if not present.
 
 ## Version History
 
+* 1.3
+  * Added Space export (flat folder structure)
 * 1.2
   * Added better HTML header and footer.
   * Added page labels to HTML headers.
