@@ -11,6 +11,24 @@ import sys
 import pypandoc
 from PIL import Image
 import re
+#from pathvalidate import sanitize_filename
+
+##
+## dealing with retries
+## src: https://findwork.dev/blog/advanced-usage-python-requests-timeouts-retries-hooks/
+## 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+retry_strategy = Retry(
+    total=3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS"]
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+http = requests.Session()
+http.mount("https://", adapter)
+http.mount("http://", adapter)
+
 
 apiToken = os.environ["atlassianAPIToken"]
 userName = os.environ["atlassianUserEmail"]
@@ -25,25 +43,25 @@ try:
     spaceKey = sys.argv[2]
 except IndexError:
     raise SystemExit(f"Usage:<script>.py <site> {sys.argv[2]}")
-print('Space ID: ' + spaceKey)
+
 
 
 def getSpaceTitle(argSpaceId):
     url = "https://{your-domain}/wiki/api/v2/spaces/{id}"
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/api/v2/spaces/' + str(argSpaceId)
-    response = requests.get(serverURL, auth=(userName, apiToken))
+    response = http.get(serverURL, auth=(userName, apiToken),timeout=30)
     return(response)
 
 def getSpacesAll(atlassianSite):
     url = "https://{your-domain}/wiki/api/v2/spaces"
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/api/v2/spaces/'
-    response = requests.get(serverURL, auth=(userName, apiToken))
+    response = http.get(serverURL, auth=(userName, apiToken),timeout=30)
     return(response)
 
 for n in getSpacesAll(atlassianSite).json()['results']:
     if (n['key'] == spaceKey):
         spaceId = n['id']
-        print(str(spaceKey) + ' = ' + str(spaceId))
+        print('Space Key: ' + str(spaceKey) + ', space ID: ' + str(spaceId))
 
 spaceTitle = getSpaceTitle(spaceId)
 
@@ -52,14 +70,13 @@ def getPagesFromSpace(argSpaceId):
     # ref: https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-page/#api-spaces-id-pages-get
     #  url = "https://{your-domain}/wiki/api/v2/spaces/{id}/pages"
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/api/v2/spaces/' + str(argSpaceId) + '/pages?status=current&limit=250'
-    response = requests.get(serverURL, auth=(userName, apiToken))
+    response = http.get(serverURL, auth=(userName, apiToken),timeout=30)
     pageList = response.json()['results']
     while 'next' in response.json()['_links'].keys():
         print(str(response.json()['_links']))
         serverURL = serverURL + '&cursor' + response.json()['_links']['next'].split('cursor')[1]
-        response = requests.get(serverURL, auth=(userName, apiToken))
+        response = http.get(serverURL, auth=(userName, apiToken),timeout=30)
         pageList = pageList + response.json()['results']
-    print(str(len(pageList)) + ' pages in space ' + spaceKey)
     return(pageList)
 
 allPagesFull = getPagesFromSpace(spaceId)
@@ -81,7 +98,8 @@ for n in allPagesShort:
         # create parent page using n['pageTitle']
         # create parent folder (same name as parent page)
         currentParent = n['pageId']         # sets the parent for the next IF statent
-    break
+        print('Parent page: ' + n['pageTitle'] + '(' + str(n['pageId']) + ')')
+        break
 
 #
 # Handling output folder path
@@ -123,27 +141,27 @@ if not os.path.exists(outdirStyles + '/site.css'):
 
 def getBodyExportView(argPageID):       # copied from byLabel
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID) + '?expand=body.export_view'
-    response = requests.get(serverURL, auth=(userName, apiToken))
+    response = http.get(serverURL, auth=(userName, apiToken),timeout=30)
     return(response)
 
 # get page labels
 def getPageLabels(argPageID):           # copied from byLabel
     htmlLabels = []
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/api/v2/pages/' + str(argPageID) + '/labels'
-    response = requests.get(serverURL, auth=(userName, apiToken),timeout=30).json()
+    response = http.get(serverURL, auth=(userName, apiToken),timeout=30).json()
     for l in response['results']:
         htmlLabels.append(l['name'])
-    #htmlLabels = ",".join(htmlLabels)
     return(htmlLabels)
 
 def getAttachments(argPageID):
     serverURL = 'https://' + atlassianSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID) + '?expand=children.attachment'
-    response = requests.get(serverURL, auth=(userName, apiToken),timeout=30)
+    response = http.get(serverURL, auth=(userName, apiToken),timeout=30)
     myAttachments = response.json()['children']['attachment']['results']
     for attachment in myAttachments:
-        attachmentTitle = attachment['title'].replace(":","-").replace(" ","_").replace("%20","_").replace("%80","").replace("%8B","").replace("%E2","").replace('\u200b','').replace('\u200c','').replace("%5B","[").replace("%5D","]")
+        attachmentTitle = requests.utils.unquote(attachment['title'])
+        print("Getting attachment: " + attachmentTitle)
         attachmentURL = 'https://' + atlassianSite + '.atlassian.net/wiki' + attachment['_links']['download']
-        requestAttachment = requests.get(attachmentURL, auth=(userName, apiToken),allow_redirects=True,timeout=30)
+        requestAttachment = http.get(attachmentURL, auth=(userName, apiToken),allow_redirects=True,timeout=30)
         open(os.path.join(outdirAttach,attachmentTitle), 'wb').write(requestAttachment.content)
         myAttachmentsList.append(attachmentTitle)
     return(myAttachmentsList)
@@ -194,30 +212,38 @@ def dumpHtml(argHTML,argTitle,argPageID):
     #
     # dealing with "confluence-embedded-image confluence-external-resource"
     #
-    myEmbedsExternals = soup.findAll('img',class_="confluence-embedded-image confluence-external-resource")
+    myEmbedsExternals = soup.findAll('img',class_=re.compile("confluence-external-resource$"))
     myEmbedsExternalsCounter = 0
     for embedExt in myEmbedsExternals:
         origEmbedExternalPath = embedExt['src']
-        origEmbedExternalName = origEmbedExternalPath.rsplit('/',1)[-1].rsplit('?')[0]
-        origEmbedExternalName = str(argPageID) + "-" + str(myEmbedsExternalsCounter) + "-" + origEmbedExternalName
-        myEmbedExternalPath = os.path.join(outdirAttach,origEmbedExternalName)
-        toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
-        #myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace("%20"," ")      # replace offending characters from file name
-        myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace(" ","_").replace("%20","_").replace("%80","").replace("%8B","").replace("%E2","").replace('\u200b','').replace('\u200c','').replace("%5B","[").replace("%5D","]")
-        try:
-            open(myEmbedExternalPath,'wb').write(toDownload.content)
-        except:
-            print(origEmbedExternalPath)
-        print("Embed External path: " + str(myEmbedExternalPath))
-        img = Image.open(myEmbedExternalPath)
-        if img.width < 600:
-            embedExt['width'] = img.width
+        if "confluence/placeholder/unknown-attachment" in embedExt['src']:
+            ##
+            ## dealing with: "Max retries exceeded with url: /plugins/servlet/confluence/placeholder/unknown-attachment"
+            ##
+            print('Ignoring unknown-attachment')
         else:
-            embedExt['width'] = 600
-        img.close
-        embedExt['height'] = "auto"
-        embedExt['onclick'] = "window.open(\"" + myEmbedExternalPath + "\")"
-        embedExt['src'] = myEmbedExternalPath
+            origEmbedExternalName = requests.utils.unquote(origEmbedExternalPath.rsplit('/',1)[-1].rsplit('?')[0])
+            origEmbedExternalName = str(argPageID) + "-" + str(myEmbedsExternalsCounter) + "-" + origEmbedExternalName
+            myEmbedExternalPath = os.path.join(outdirAttach,origEmbedExternalName)
+            toDownload = http.get(origEmbedExternalPath, allow_redirects=True,timeout=30)
+            try:
+                open(myEmbedExternalPath,'wb').write(toDownload.content)
+            except:
+                print('Did not save ' + myEmbedExternalPath)
+            print("Embed External path: " + str(myEmbedExternalPath))
+            try:
+                img = Image.open(myEmbedExternalPath)
+            except:
+                print('invalid embed external')
+            else:
+                if img.width < 600:
+                    embedExt['width'] = img.width
+                else:
+                    embedExt['width'] = 600
+                img.close
+                embedExt['height'] = "auto"
+                embedExt['onclick'] = "window.open(\"" + myEmbedExternalPath + "\")"
+                embedExt['src'] = myEmbedExternalPath
         myEmbedsExternalsCounter = myEmbedsExternalsCounter + 1
     #
     # dealing with "confluence-embedded-image"
@@ -226,36 +252,50 @@ def dumpHtml(argHTML,argTitle,argPageID):
     print(str(len(myEmbeds)) + " embedded images.")
     for embed in myEmbeds:
         origEmbedPath = embed['src']
-        origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]
-        #myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_")        # replace offending characters from file name
-        myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_").replace("%80","").replace("%8B","").replace("%E2","").replace('\u200b','').replace('\u200c','').replace("%5B","[").replace("%5D","]")
-        myEmbedPath = attachDir + myEmbedName
-        myEmbedPathFull = os.path.join(outdir,myEmbedPath)
-        print("Embed path: " + myEmbedPath)
-        img = Image.open(myEmbedPathFull)
-        if img.width < 600:
-            embed['width'] = img.width
+        if "confluence/placeholder/unknown-attachment" in embed['src']:
+            ##
+            ## dealing with: "Max retries exceeded with url: /plugins/servlet/confluence/placeholder/unknown-attachment"
+            ##
+            print('Skipping unknown-attachment')
         else:
-            embed['width'] = 600
-        img.close
-        embed['height'] = "auto"
-        embed['onclick'] = "window.open(\"" + myEmbedPath + "\")"
-        embed['src'] = myEmbedPath
+            origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]
+            myEmbedName = requests.utils.unquote(origEmbedName)
+            #print("origEmbedName: " + origEmbedName)
+            #print("myEmbedName: " + myEmbedName)
+            myEmbedPath = attachDir + myEmbedName
+            myEmbedPathFull = os.path.join(outdir,myEmbedPath)
+            print("Embed path: " + myEmbedPath)
+            img = Image.open(myEmbedPathFull)
+            if img.width < 600:
+                embed['width'] = img.width
+            else:
+                embed['width'] = 600
+            img.close
+            embed['height'] = "auto"
+            embed['onclick'] = "window.open(\"" + myEmbedPath + "\")"
+            embed['src'] = myEmbedPath
     #
     # dealing with "emoticon"
     #
     myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or
     print(str(len(myEmoticons)) + " emoticons.")
     for emoticon in myEmoticons:
-        requestEmoticons = requests.get(emoticon['src'], auth=(userName, apiToken))
-        myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]
-        if myEmoticonTitle not in myEmoticonsList:
-            myEmoticonsList.append(myEmoticonTitle)
-            print("Getting emoticon: " + myEmoticonTitle)
-            filePath = os.path.join(outdirEmoticons,myEmoticonTitle)
-            open(filePath, 'wb').write(requestEmoticons.content)
-        myEmoticonPath = emoticonsDir + myEmoticonTitle
-        emoticon['src'] = myEmoticonPath
+        if emoticon['src'].startswith('https://' + atlassianSite):
+            requestEmoticons = http.get(emoticon['src'], auth=(userName, apiToken),timeout=30)
+            #print('Getting emoticon: ' + emoticon['src'])
+            myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]
+            if myEmoticonTitle not in myEmoticonsList:
+                myEmoticonsList.append(myEmoticonTitle)
+                print("Getting emoticon: " + myEmoticonTitle)
+                filePath = os.path.join(outdirEmoticons,myEmoticonTitle)
+                open(filePath, 'wb').write(requestEmoticons.content)
+            myEmoticonPath = emoticonsDir + myEmoticonTitle
+            emoticon['src'] = myEmoticonPath
+        else:
+            ##
+            ## dealing with: "Invalid URL '/wiki/s/... ': No scheme supplied"
+            ##
+            print('Skipping, url starts with /wiki/s or /s/ or No scheme supplied')
     #
     # Putting HTML together
     #
@@ -284,22 +324,21 @@ def dumpHtml(argHTML,argTitle,argPageID):
 
 ## based on byLabel
 ## available values
-### ['id'],
-### ['title'],
-### ['parentId'],
-### ['spaceId'],
 ###        'pageId' : n['id'],
 ###        'pageTitle' : n['title'],
 ###        'parentId' : n['parentId'],
 ###        'spaceId' : n['spaceId'],
 
-
+print(str(len(allPagesShort)) + ' pages to export')
+pageCounter = 0
 for p in allPagesShort:
-    print(str(p['pageId']))
+    pageCounter = pageCounter + 1
     myBodyExportView = getBodyExportView(p['pageId']).json()
     myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']
     myBodyExportViewName = p['pageTitle']
     myBodyExportViewTitle = p['pageTitle'].replace("/","-")
+    print()
+    print("Getting page #" + str(pageCounter) + '/' + str(len(allPagesShort)) + ', ' + myBodyExportViewTitle + ', ' + str(p['pageId']))
     myBodyExportViewLabels = getPageLabels(p['pageId'])
     myBodyExportViewLabels = ",".join(myBodyExportViewLabels)
     myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
