@@ -104,6 +104,11 @@ Contributors names and contact info
 [ ] Create a page layout to display TOC + articles.
 [x] Copy `styles/site.css` into `output/styles/` if not present.
 
+## Issues
+
+* It does not like very long attachment files, you'll need to rename them before the dump.
+* Pages previously migrated from Confluence Server might have issues with old emoticons. The best is to convert the pages to the New Editor, which will replace the missing emoticons.
+
 ## Version History
 
 * 1.3
