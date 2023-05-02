@@ -16,19 +16,19 @@ The 'site.css' file included with HTML exports is not as complete as the one abo
 
 Folder and file structure:
 
-* `output/<pageID>`
-  * `output/<pageID>/_images/`
-  * `output/<pageID>/_static/`
-  * Copies the file `styles/site.css` into `output/<site|page|label>/_static/`.
+* `<output folder>/<page|space|label>`
+  * `<output folder>/<page|space|label>/_images/`
+  * `<output folder>/<page|space|label>/_static/`
+  * Copies the file `styles/site.css` into `<output folder>/<page|space|label>/_static/`
+
+Note: `<output folder>` will be in the script path if no argument is defined.
 
 ## What it does
 
 * leverages the Confluence Cloud API
-* use CQL with `.../rest/api/search?cql` to search by labels.
-* FOR loop to cycle through the `pageIDs`.
-  * **getBodyExportView**: download Export View for the page `.../rest/api/content/' + str(pageid) + '?expand=body.export_view`.
-  * **getAttachments**: download all Attachments from the page `.../rest/api/content/' + str(pageID) + '?expand=children.attachment`.
-  * get complete Export View in JSON: `myBodyExportView = getBodyExportView(pageID).json()`.
+  * uses CQL with `.../rest/api/search?cql` to search by labels
+  * gets **Export View** from pages (`.../rest/api/content/' + str(pageid) + '?expand=body.export_view`)
+  * download all Attachments from the page `.../rest/api/content/' + str(pageID) + '?expand=children.attachment`.
   * get page HTML from JSON: `myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']`.
   * use BS to update HTML **dumpHtml(<Page HTML>,<Page Title>,<Page ID>)**.
     * prepend a page header containing a `<head>` as well as a link to the original page.
@@ -48,11 +48,11 @@ Folder and file structure:
   * beautifulsoup4
   * Pillow (handle images)
   * pandoc & pypandoc (convert to RST)
+  * re
 
 ### Installing
 
 * Clone repo.
-  * It already includes `styles/site.css`
 * Install dependencies.
 * Declare system variables for Atlassian API Token.
 
@@ -97,8 +97,9 @@ Contributors names and contact info
 
 ## Improvements
 
+[ ] Add links to Downloads for the corresponding pages
 [ ] Update all links from downloaded pages to the local copies
-[ ] Add to headers the parent page and page labels 
+[ ] Add to headers the parent page and page labels
 [ ] Create an index of the pages to use as a TOC.
 [ ] Create a page layout to display TOC + articles.
 [x] Copy `styles/site.css` into `output/styles/` if not present.
