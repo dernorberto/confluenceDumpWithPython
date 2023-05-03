@@ -24,14 +24,17 @@ CURRENT STATE
 # Set path for where script is
 #
 scriptDir = os.path.dirname(os.path.abspath(__file__))
+attachDir = "_images/"
+emoticonsDir = "_images/"
+stylesDir = "_static/"
 
 #
 # Create the output folders, set to match Sphynx structure
 #
 def setDirs(argOutdir="output"):        # setting default to output
-    attachDir = "_images/"
-    emoticonsDir = "_images/"
-    stylesDir = "_static/"
+#    attachDir = "_images/"
+#    emoticonsDir = "_images/"
+#    stylesDir = "_static/"
     outdirAttach = os.path.join(argOutdir,attachDir)
     outdirEmoticons = os.path.join(argOutdir,emoticonsDir)
     outdirStyles = os.path.join(argOutdir,stylesDir)
@@ -102,6 +105,11 @@ def getPageName(argSite,argPageId,argUsername,argApiToken):
     r_pagetree = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30)
     return(r_pagetree.json()['id'] + "_" + r_pagetree.json()['title'])
 
+def getPageParent(argSite,argPageId,argUsername,argApiToken):
+    serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/pages/' + str(argPageId)
+    response = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30)
+    return(response.json()['parentId'])
+
 def getAttachments(argSite,argPageId,argOutdirAttach,argUsername,argApiToken):
     myAttachmentsList = []
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageId) + '?expand=children.attachment'
@@ -129,35 +137,67 @@ def getPageLabels(argSite,argPageId,argUsername,argApiToken):
     response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30).json()
     for l in response['results']:
         htmlLabels.append(l['name'])
-    #htmlLabels = ",".join(htmlLabels)
+    htmlLabels = ",".join(htmlLabels)
     return(htmlLabels)
 
-def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argUserName,argApiToken):
+def getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken):
+    myPagePropertiesChildren = []
+    myPagePropertiesChildrenDict = {}
+    soup = bs(argHTML, "html.parser")
+    myPagePropertiesItems = soup.findAll('td',class_="title")
+    myPagePropertiesItemsCounter = 0
+    for n in myPagePropertiesItems:
+        myPageID = str(n['data-content-id'])
+        myPagePropertiesChildren.append(str(n['data-content-id']))
+        myPagePropertiesItemsCounter = myPagePropertiesItemsCounter + 1
+        myPageName = getPageName(argSite,int(myPageID),argUserName,argApiToken).rsplit('_',1)[1].replace(":","-").replace(" ","_").replace("%20","_")          # replace offending characters from file name
+        myPagePropertiesChildrenDict.update({ myPageID:{}})
+        myPagePropertiesChildrenDict[myPageID].update({"ID": myPageID})
+        myPagePropertiesChildrenDict[myPageID].update({"Name": myPageName})
+    print(str(myPagePropertiesItemsCounter) + " Pages")
+    print("Exporting to: " + argOutdir)
+    return[myPagePropertiesChildren,myPagePropertiesChildrenDict]
+
+
+def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageParent,argUserName,argApiToken,argType="common",argHtmlFileName=""):
     myEmoticonsList = []
     myOutdirs = mkOutdirs(argOutdir)
     soup = bs(argHTML, "html.parser")
     htmlFileName = str(argTitle) + '.html'
     htmlFilePath = os.path.join(argOutdir,htmlFileName)
     myAttachments = getAttachments(argSite,argPageId,str(myOutdirs[0]),argUserName,argApiToken)
-
+    #
+    # used for pageprops mode
+    #
+    #if (argType == "child"):
+        #myReportChildrenDict = getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[1]              # get list of all page properties children
+        #myReportChildrenDict[argPageId].update({"Filename": argHtmlFileName})
+    if (argType == "report"):
+        #myReportChildren = getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[0]      # list
+        myReportChildrenDict= getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[1]      # dict
+        myPagePropertiesItems = soup.findAll('td',class_="title")       # list
+        for item in myPagePropertiesItems:
+            id = item['data-content-id']
+            #item.a['href'] = [int(id)]['Filename']
+            item.a['href'] = (myReportChildrenDict[id]['Name'] + '.html')
     #
     # dealing with "confluence-embedded-image confluence-external-resource"
     #
     myEmbedsExternals = soup.findAll('img',class_="confluence-embedded-image confluence-external-resource")
-    print(myEmbedsExternals)
     myEmbedsExternalsCounter = 0
     for embedExt in myEmbedsExternals:
-        origEmbedExternalPath = embedExt['src']
-        origEmbedExternalName = origEmbedExternalPath.rsplit('/',1)[-1].rsplit('?')[0]
-        origEmbedExternalName = str(argPageId) + "-" + str(myEmbedsExternalsCounter) + "-" + origEmbedExternalName
-        myEmbedExternalPath = os.path.join(myOutdirs[0],origEmbedExternalName)
+        origEmbedExternalPath = embedExt['src']     # online link to file
+        origEmbedExternalName = origEmbedExternalPath.rsplit('/',1)[-1].rsplit('?')[0]      # just the file name
+        myEmbedExternalName = str(argPageId) + "-" + str(myEmbedsExternalsCounter) + "-" + requests.utils.unquote(origEmbedExternalName)    # local filename
+        myEmbedExternalPath = os.path.join(myOutdirs[0],myEmbedExternalName).replace(":","-")        # local filename and path
+        myEmbedExternalPathRelative = os.path.join(attachDir,myEmbedExternalName).replace(":","-")
+        print("myEmbedExternalPath = " + myEmbedExternalPath)
+        ###vs /output/87490593-Logging%20and%20Auditing%20Standard/  output/87490593-Logging%20and%20Auditing%20Standard/_images/87490593-0-page-0.png
         toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
-        myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace("%20"," ")      # replace offending characters from file name
         try:
             open(myEmbedExternalPath,'wb').write(toDownload.content)
         except:
             print(origEmbedExternalPath)
-        #print("Embed External path: " + str(myEmbedExternalPath))
         img = Image.open(myEmbedExternalPath)
         if img.width < 600:
             embedExt['width'] = img.width
@@ -165,27 +205,26 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argUserN
             embedExt['width'] = 600
         img.close
         embedExt['height'] = "auto"
-        embedExt['onclick'] = "window.open(\"" + myEmbedExternalPath + "\")"
-        embedExt['src'] = myEmbedExternalPath
+        embedExt['onclick'] = "window.open(\"" + str(myEmbedExternalPathRelative) + "\")"
+        embedExt['src'] = str(myEmbedExternalPathRelative)
+        embedExt['data-image-src'] = str(myEmbedExternalPathRelative)
+        print("myEmbedExternalPathRelative = " + str(myEmbedExternalPathRelative))
+        print(embedExt)
         myEmbedsExternalsCounter = myEmbedsExternalsCounter + 1
+
     #
     # dealing with "confluence-embedded-image"
     #
     myEmbeds = soup.findAll('img',class_=re.compile("^confluence-embedded-image"))
     print(str(len(myEmbeds)) + " embedded images.")
     for embed in myEmbeds:
-        origEmbedPath = embed['src']
-        #print("origEmbedPath = " + origEmbedPath)
-        origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]
-        #print("origEmbedName = " + origEmbedName)
-        myEmbedName = requests.utils.unquote(origEmbedName)
-        #print("myEmbedName = " + myEmbedName)
-        #myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_")        # replace offending characters from file name
-        myEmbedPath = myOutdirs[0] + myEmbedName
+        origEmbedPath = embed['src']        # online link to file
+        origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]      # online file name
+        myEmbedName = requests.utils.unquote(origEmbedName)                 # local file name
+        myEmbedPath = myOutdirs[0] + myEmbedName                            # local file path
+        myEmbedPathRelative = attachDir + myEmbedName
         #print("myEmbedPath = " + myEmbedPath)
         #myEmbedPathFull = os.path.join(argOutdir,myEmbedPath)
-        #print("argOutdir = " + argOutdir)
-        #print("myEmbedPathFull = " + myEmbedPathFull)
         try:
             img = Image.open(myEmbedPath)
         except:
@@ -207,30 +246,40 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argUserN
     print(str(len(myEmoticons)) + " emoticons.")
     for emoticon in myEmoticons:
         requestEmoticons = requests.get(emoticon['src'], auth=(argUserName, argApiToken))
-        myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]
+        myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]     # just filename
+        myEmoticonPath = emoticonsDir + myEmoticonTitle
         if myEmoticonTitle not in myEmoticonsList:
             myEmoticonsList.append(myEmoticonTitle)
             print("Getting emoticon: " + myEmoticonTitle)
             filePath = os.path.join(myOutdirs[1],myEmoticonTitle)
             open(filePath, 'wb').write(requestEmoticons.content)
-        myEmoticonPath = myOutdirs[1] + myEmoticonTitle
+            #print("myEmoticonPath = " + myEmoticonPath)
         emoticon['src'] = myEmoticonPath
+
     myBodyExportView = getBodyExportView(argSite,argPageId,argUserName,argApiToken).json()
     pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
     myHeader = """<html>
 <head>
 <title>""" + argTitle + """</title>
-<link rel="stylesheet" href=\"""" + myOutdirs[2] + """site.css" type="text/css" />
+<link rel="stylesheet" href=\"""" + stylesDir + """site.css" type="text/css" />
 <meta name="generator" content="confluenceExportHTML" />
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta name="labels" content=\"""" + str(argPageLabels) + """\">
-<meta name="pageID" content=\"""" + str(argPageId) + """\">
+<meta name="ConfluencePageLabels" content=\"""" + str(argPageLabels) + """\">
+<meta name="ConfluencePageID" content=\"""" + str(argPageId) + """\">
+<meta name="ConfluencePageParent" content=\"""" + str(argPageParent) + """\">
 </head>
 <body>
 <h2>""" + argTitle + """</h2>
 <p>Original URL: <a href=\"""" + pageUrl + """\"> """+argTitle+"""</a><hr>"""
-
-
+    #
+    # At the end of the page, put a link to all attachments.
+    #
+    if len(myAttachments) > 0:
+        myPreFooter = "<h2>Attachments</h2><ol>"
+        for attachment in myAttachments:
+            #myPreFooter += ("""<a href=\"""" + os.path.join(attachDir,attachment) + """\"> """ + attachment + """</a></br>""")
+            myPreFooter += ("""<li><a href=\"""" + os.path.join(attachDir,attachment) + """\"> """ + attachment + """</a></li>""")
+        myPreFooter +=  "</ol></br>"
     #
     # Putting HTML together
     #
@@ -238,9 +287,10 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argUserN
     htmlFile = open(htmlFilePath, 'w')
     htmlFile.write(myHeader)
     htmlFile.write(prettyHTML)
+    htmlFile.write(myPreFooter)
     htmlFile.write(setFooterHTML())
     htmlFile.close()
-    print("Exported HTML file " + htmlFileName)
+    print("Exported HTML file " + htmlFilePath)
     #
     # convert html to rst
     #
@@ -262,7 +312,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argUserN
 #
 # Define HTML page header
 #
-def setHtmlHeader(argTitle,argURL,argLabels,argPageId,argOutdirStyles):
+def setHtmlHeader(argTitle,argURL,argLabels,argPageId,argOutdirStyles):     # not in use
     myHeader = """<html>
 <head>
 <title>""" + argTitle + """</title>
