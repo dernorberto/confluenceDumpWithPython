@@ -110,7 +110,8 @@ Contributors names and contact info
 * Pages previously migrated from Confluence Server might have issues with old emoticons. The best is to convert the pages to the New Editor, which will replace the missing emoticons.
 
 ## Version History
-
+* 1.4
+  * Creating alternative python file structure (confluenceDumpWithPython.py & myModules.py)
 * 1.3
   * Added Space export (flat folder structure)
 * 1.2
