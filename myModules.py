@@ -60,19 +60,51 @@ def mkOutdirs(argOutdir="output"):       # setting default to output
         os.system('cp ' + scriptDir + '/styles/site.css "' + outdirStyles + '"')
     return(outdirList)
 
-def getBodyExportView(argSite,argPageID,argUsername,argApiToken):
-    serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID) + '?expand=body.export_view'
+def getSpaceTitle(argSite,argSpaceId,argUsername,argApiToken):
+    serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/spaces/' + str(argSpaceId)
+    response = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30).json()['name']
+    return(response)
+
+def getSpacesAll(argSite,argUsername,argApiToken):
+    #spaceList = []
+    serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/spaces/?limit=250'
+    response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30)
+    response.raise_for_status()  # raises exception when not a 2xx response
+    print(response.json().keys())
+    spaceList = response.json()['results']
+    while 'next' in response.json()['_links'].keys():
+        #print(str(response.json()['_links']))
+        cursorServerURL = serverURL + '&cursor' + response.json()['_links']['next'].split('cursor')[1]
+        #print(serverURL)
+        response = requests.get(cursorServerURL, auth=(argUsername,argApiToken),timeout=30)
+        spaceList = spaceList + response.json()['results']
+    return(spaceList)
+
+def getPagesFromSpace(argSite,argSpaceId,argUsername,argApiToken):
+    pageList = []
+    serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/spaces/' + str(argSpaceId) + '/pages?status=current&limit=250'
+    response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30)
+    pageList = response.json()['results']
+    while 'next' in response.json()['_links'].keys():
+        print(str(response.json()['_links']))
+        cursorServerURL = serverURL + '&cursor' + response.json()['_links']['next'].split('cursor')[1]
+        response = requests.get(cursorServerURL, auth=(argUsername,argApiToken),timeout=30)
+        pageList = pageList + response.json()['results']
+    return(pageList)
+
+def getBodyExportView(argSite,argPageId,argUsername,argApiToken):
+    serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageId) + '?expand=body.export_view'
     response = requests.get(serverURL, auth=(argUsername, argApiToken))
     return(response)
 
-def getPageName(argSite,argPageID,argUsername,argApiToken):
-    serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID)
+def getPageName(argSite,argPageId,argUsername,argApiToken):
+    serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageId)
     r_pagetree = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30)
     return(r_pagetree.json()['id'] + "_" + r_pagetree.json()['title'])
 
-def getAttachments(argSite,argPageID,argOutdirAttach,argUsername,argApiToken):
+def getAttachments(argSite,argPageId,argOutdirAttach,argUsername,argApiToken):
     myAttachmentsList = []
-    serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageID) + '?expand=children.attachment'
+    serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageId) + '?expand=children.attachment'
     response = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30)
     myAttachments = response.json()['children']['attachment']['results']
     for attachment in myAttachments:
@@ -91,33 +123,33 @@ def getAttachments(argSite,argPageID,argOutdirAttach,argUsername,argApiToken):
     return(myAttachmentsList)
 
 # get page labels
-def getPageLabels(argSite,argPageID,argUsername,argApiToken):
+def getPageLabels(argSite,argPageId,argUsername,argApiToken):
     htmlLabels = []
-    serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/pages/' + str(argPageID) + '/labels'
+    serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/pages/' + str(argPageId) + '/labels'
     response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30).json()
     for l in response['results']:
         htmlLabels.append(l['name'])
     #htmlLabels = ",".join(htmlLabels)
     return(htmlLabels)
 
-def dumpHtml(argSite,argHTML,argTitle,argPageID,argOutdir,argPageLabels,argUserName,argApiToken):
+def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argUserName,argApiToken):
     myEmoticonsList = []
     myOutdirs = mkOutdirs(argOutdir)
     soup = bs(argHTML, "html.parser")
     htmlFileName = str(argTitle) + '.html'
     htmlFilePath = os.path.join(argOutdir,htmlFileName)
-    myAttachments = getAttachments(argSite,argPageID,str(myOutdirs[0]),argUserName,argApiToken)
-
+    myAttachments = getAttachments(argSite,argPageId,str(myOutdirs[0]),argUserName,argApiToken)
 
     #
     # dealing with "confluence-embedded-image confluence-external-resource"
     #
     myEmbedsExternals = soup.findAll('img',class_="confluence-embedded-image confluence-external-resource")
+    print(myEmbedsExternals)
     myEmbedsExternalsCounter = 0
     for embedExt in myEmbedsExternals:
         origEmbedExternalPath = embedExt['src']
         origEmbedExternalName = origEmbedExternalPath.rsplit('/',1)[-1].rsplit('?')[0]
-        origEmbedExternalName = str(argPageID) + "-" + str(myEmbedsExternalsCounter) + "-" + origEmbedExternalName
+        origEmbedExternalName = str(argPageId) + "-" + str(myEmbedsExternalsCounter) + "-" + origEmbedExternalName
         myEmbedExternalPath = os.path.join(myOutdirs[0],origEmbedExternalName)
         toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
         myEmbedExternalPath = myEmbedExternalPath.replace(":","-").replace("%20"," ")      # replace offending characters from file name
@@ -125,7 +157,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageID,argOutdir,argPageLabels,argUserN
             open(myEmbedExternalPath,'wb').write(toDownload.content)
         except:
             print(origEmbedExternalPath)
-        print("Embed External path: " + str(myEmbedExternalPath))
+        #print("Embed External path: " + str(myEmbedExternalPath))
         img = Image.open(myEmbedExternalPath)
         if img.width < 600:
             embedExt['width'] = img.width
@@ -143,28 +175,37 @@ def dumpHtml(argSite,argHTML,argTitle,argPageID,argOutdir,argPageLabels,argUserN
     print(str(len(myEmbeds)) + " embedded images.")
     for embed in myEmbeds:
         origEmbedPath = embed['src']
+        #print("origEmbedPath = " + origEmbedPath)
         origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]
+        #print("origEmbedName = " + origEmbedName)
         myEmbedName = requests.utils.unquote(origEmbedName)
+        #print("myEmbedName = " + myEmbedName)
         #myEmbedName = origEmbedName.replace(":","-").replace(" ","_").replace("%20","_")        # replace offending characters from file name
         myEmbedPath = myOutdirs[0] + myEmbedName
-        myEmbedPathFull = os.path.join(argOutdir,myEmbedPath)
-        print("Embed path: " + myEmbedPath)
-        img = Image.open(myEmbedPathFull)
-        if img.width < 600:
-            embed['width'] = img.width
+        #print("myEmbedPath = " + myEmbedPath)
+        #myEmbedPathFull = os.path.join(argOutdir,myEmbedPath)
+        #print("argOutdir = " + argOutdir)
+        #print("myEmbedPathFull = " + myEmbedPathFull)
+        try:
+            img = Image.open(myEmbedPath)
+        except:
+            print("WARNING: Skipping embed file " + myEmbedPath + " due to issues.")
         else:
-            embed['width'] = 600
-        img.close
-        embed['height'] = "auto"
-        embed['onclick'] = "window.open(\"" + myEmbedPath + "\")"
-        embed['src'] = myEmbedPath
+            if img.width < 600:
+                embed['width'] = img.width
+            else:
+                embed['width'] = 600
+            img.close
+            embed['height'] = "auto"
+            embed['onclick'] = "window.open(\"" + myEmbedPath + "\")"
+            embed['src'] = myEmbedPath
     #
     # dealing with "emoticon"
     #
-    myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or
+    #myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or
+    myEmoticons = soup.findAll('img',class_=re.compile("emoticon"))     # atlassian-check_mark, or
     print(str(len(myEmoticons)) + " emoticons.")
     for emoticon in myEmoticons:
-        print(emoticon['src'])
         requestEmoticons = requests.get(emoticon['src'], auth=(argUserName, argApiToken))
         myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]
         if myEmoticonTitle not in myEmoticonsList:
@@ -174,7 +215,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageID,argOutdir,argPageLabels,argUserN
             open(filePath, 'wb').write(requestEmoticons.content)
         myEmoticonPath = myOutdirs[1] + myEmoticonTitle
         emoticon['src'] = myEmoticonPath
-    myBodyExportView = getBodyExportView(argSite,argPageID,argUserName,argApiToken).json()
+    myBodyExportView = getBodyExportView(argSite,argPageId,argUserName,argApiToken).json()
     pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
     myHeader = """<html>
 <head>
@@ -183,6 +224,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageID,argOutdir,argPageLabels,argUserN
 <meta name="generator" content="confluenceExportHTML" />
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="labels" content=\"""" + str(argPageLabels) + """\">
+<meta name="pageID" content=\"""" + str(argPageId) + """\">
 </head>
 <body>
 <h2>""" + argTitle + """</h2>
@@ -204,26 +246,31 @@ def dumpHtml(argSite,argHTML,argTitle,argPageID,argOutdir,argPageLabels,argUserN
     #
     rstFileName = str(argTitle) + '.rst'
     rstFilePath = os.path.join(argOutdir,rstFileName)
-    outputRST = pypandoc.convert_file(str(htmlFilePath), 'rst', format='html',extra_args=['--standalone','--wrap=none','--list-tables'])
-    rstPageHeader = setRstHeader(argPageLabels)
-    rstFile = open(rstFilePath, 'w')
-    rstFile.write(rstPageHeader)            # assing .. tags:: to rst file for future reference
-    rstFile.write(outputRST)
-    rstFile.close()
-    print("Exported RST file: " + rstFileName)
+    try:
+        outputRST = pypandoc.convert_file(str(htmlFilePath), 'rst', format='html',extra_args=['--standalone','--wrap=none','--list-tables'])
+    except:
+        print("There was an issue generating an RST file from the page.")
+    else:
+        rstPageHeader = setRstHeader(argPageLabels)
+        rstFile = open(rstFilePath, 'w')
+        rstFile.write(rstPageHeader)            # assing .. tags:: to rst file for future reference
+        rstFile.write(outputRST)
+        rstFile.close()
+        print("Exported RST file: " + rstFileName)
 
 
 #
 # Define HTML page header
 #
-def setHtmlHeader(argTitle,argURL,argLabels):
+def setHtmlHeader(argTitle,argURL,argLabels,argPageId,argOutdirStyles):
     myHeader = """<html>
 <head>
 <title>""" + argTitle + """</title>
-<link rel="stylesheet" href=\"""" + myOutdirs[2] + """site.css" type="text/css" />
+<link rel="stylesheet" href=\"""" + argOutdirStyles + """site.css" type="text/css" />
 <meta name="generator" content="confluenceExportHTML" />
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="labels" content=\"""" + str(argLabels) + """\">
+<meta name="pageID" content=\"""" + str(argPageId) + """\">
 </head>
 <body>
 <h2>""" + argTitle + """</h2>

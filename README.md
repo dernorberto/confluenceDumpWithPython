@@ -3,6 +3,20 @@
 Dump Confluence pages using Python (requests) in HTML format, including embedded pictures and attachments.
 It will updated all references to downloaded files to their local relative path.
 
+## Refactoring in Progress
+
+The steps in the Description section are still valid.
+
+Nonetheless, the refactoring will require only 2 files and accept command-line args:
+* `myModules.py`: Contains all the required functions.
+* `confluenceDumpWithPython.py`: Script to use with the following command line args:
+  * `-m, --mode`: The export mode, `single`, `space`, `bylabel`, `pageprops` (required).
+    * Note: Only `single` and `space` have been setup so far.
+  * `-S, --site`: The Atlassian Site (required).
+  * `-s, --space`: The Space Key (if needed).
+  * `-p, --page`: The Page ID (if needed).
+  * `-l, --label`: The Page label (if needed).
+
 ## Description
 
 Purpose of the files:
@@ -111,7 +125,7 @@ Contributors names and contact info
 
 ## Version History
 * 1.4
-  * Creating alternative python file structure (confluenceDumpWithPython.py & myModules.py)
+  * Refactoring into a more simple file setup (`confluenceDumpWithPython.py` & `myModules.py`)
 * 1.3
   * Added Space export (flat folder structure)
 * 1.2
