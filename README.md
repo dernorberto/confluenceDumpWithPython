@@ -111,12 +111,12 @@ Contributors names and contact info
 
 ## Improvements
 
-[x] Add links to Downloads for the corresponding pages.
-[ ] Update all links from downloaded pages to the local copies.
-[x] Add to headers the parent page and page labels.
-[ ] Create an index of the pages to use as a TOC.
-[ ] Create a page layout to display TOC + articles.
-[x] Copy `styles/site.css` into `output/styles/` if not present.
+- [x] Add links to Downloads for the corresponding pages.
+- [ ] Update all links from downloaded pages to the local copies.
+- [x] Add to headers the parent page and page labels.
+- [ ] Create an index of the pages to use as a TOC.
+- [ ] Create a page layout to display TOC + articles.
+- [x] Copy `styles/site.css` into `output/styles/` if not present.
 
 ## Issues
 
