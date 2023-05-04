@@ -32,13 +32,9 @@ stylesDir = "_static/"
 # Create the output folders, set to match Sphynx structure
 #
 def setDirs(argOutdir="output"):        # setting default to output
-#    attachDir = "_images/"
-#    emoticonsDir = "_images/"
-#    stylesDir = "_static/"
     outdirAttach = os.path.join(argOutdir,attachDir)
     outdirEmoticons = os.path.join(argOutdir,emoticonsDir)
     outdirStyles = os.path.join(argOutdir,stylesDir)
-    #return outdirAttach,outdirEmoticons,outdirStyles
     return[outdirAttach, outdirEmoticons, outdirStyles]      # returns a list
 
 def mkOutdirs(argOutdir="output"):       # setting default to output
@@ -173,12 +169,10 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         #myReportChildrenDict = getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[1]              # get list of all page properties children
         #myReportChildrenDict[argPageId].update({"Filename": argHtmlFileName})
     if (argType == "report"):
-        #myReportChildren = getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[0]      # list
         myReportChildrenDict= getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[1]      # dict
         myPagePropertiesItems = soup.findAll('td',class_="title")       # list
         for item in myPagePropertiesItems:
             id = item['data-content-id']
-            #item.a['href'] = [int(id)]['Filename']
             item.a['href'] = (myReportChildrenDict[id]['Name'] + '.html')
     #
     # dealing with "confluence-embedded-image confluence-external-resource"
@@ -191,8 +185,6 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         myEmbedExternalName = str(argPageId) + "-" + str(myEmbedsExternalsCounter) + "-" + requests.utils.unquote(origEmbedExternalName)    # local filename
         myEmbedExternalPath = os.path.join(myOutdirs[0],myEmbedExternalName).replace(":","-")        # local filename and path
         myEmbedExternalPathRelative = os.path.join(attachDir,myEmbedExternalName).replace(":","-")
-        print("myEmbedExternalPath = " + myEmbedExternalPath)
-        ###vs /output/87490593-Logging%20and%20Auditing%20Standard/  output/87490593-Logging%20and%20Auditing%20Standard/_images/87490593-0-page-0.png
         toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
         try:
             open(myEmbedExternalPath,'wb').write(toDownload.content)
@@ -208,10 +200,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         embedExt['onclick'] = "window.open(\"" + str(myEmbedExternalPathRelative) + "\")"
         embedExt['src'] = str(myEmbedExternalPathRelative)
         embedExt['data-image-src'] = str(myEmbedExternalPathRelative)
-        print("myEmbedExternalPathRelative = " + str(myEmbedExternalPathRelative))
-        print(embedExt)
         myEmbedsExternalsCounter = myEmbedsExternalsCounter + 1
-
     #
     # dealing with "confluence-embedded-image"
     #
@@ -223,8 +212,6 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         myEmbedName = requests.utils.unquote(origEmbedName)                 # local file name
         myEmbedPath = myOutdirs[0] + myEmbedName                            # local file path
         myEmbedPathRelative = attachDir + myEmbedName
-        #print("myEmbedPath = " + myEmbedPath)
-        #myEmbedPathFull = os.path.join(argOutdir,myEmbedPath)
         try:
             img = Image.open(myEmbedPath)
         except:
@@ -236,12 +223,11 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
                 embed['width'] = 600
             img.close
             embed['height'] = "auto"
-            embed['onclick'] = "window.open(\"" + myEmbedPath + "\")"
-            embed['src'] = myEmbedPath
+            embed['onclick'] = "window.open(\"" + myEmbedPathRelative + "\")"
+            embed['src'] = myEmbedPathRelative
     #
     # dealing with "emoticon"
     #
-    #myEmoticons = soup.findAll('img',class_="emoticon")     # atlassian-check_mark, or
     myEmoticons = soup.findAll('img',class_=re.compile("emoticon"))     # atlassian-check_mark, or
     print(str(len(myEmoticons)) + " emoticons.")
     for emoticon in myEmoticons:
@@ -255,7 +241,6 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
             open(filePath, 'wb').write(requestEmoticons.content)
             #print("myEmoticonPath = " + myEmoticonPath)
         emoticon['src'] = myEmoticonPath
-
     myBodyExportView = getBodyExportView(argSite,argPageId,argUserName,argApiToken).json()
     pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
     myHeader = """<html>
@@ -287,7 +272,8 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     htmlFile = open(htmlFilePath, 'w')
     htmlFile.write(myHeader)
     htmlFile.write(prettyHTML)
-    htmlFile.write(myPreFooter)
+    if len(myAttachments) > 0:
+        htmlFile.write(myPreFooter)
     htmlFile.write(setFooterHTML())
     htmlFile.close()
     print("Exported HTML file " + htmlFilePath)

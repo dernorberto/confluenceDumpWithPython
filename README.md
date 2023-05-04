@@ -11,7 +11,7 @@ Nonetheless, the refactoring will require only 2 files and accept command-line a
 * `myModules.py`: Contains all the required functions.
 * `confluenceDumpWithPython.py`: Script to use with the following command line args:
   * `-m, --mode`: The export mode, `single`, `space`, `bylabel`, `pageprops` (required).
-    * Note: Only `single` and `space` have been setup so far.
+    * Note: Only `single`, `pageprops` and `space` have been implemented so far.
   * `-S, --site`: The Atlassian Site (required).
   * `-s, --space`: The Space Key (if needed).
   * `-p, --page`: The Page ID (if needed).
@@ -111,7 +111,7 @@ Contributors names and contact info
 
 ## Improvements
 
-[ ] Add links to Downloads for the corresponding pages.
+[x] Add links to Downloads for the corresponding pages.
 [ ] Update all links from downloaded pages to the local copies.
 [x] Add to headers the parent page and page labels.
 [ ] Create an index of the pages to use as a TOC.
