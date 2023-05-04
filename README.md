@@ -1,7 +1,7 @@
 # Confluence Dump With Python
 
-Dump Confluence pages using Python (requests) in HTML format, including embedded pictures and attachments.
-It will updated all references to downloaded files to their local relative path.
+Dump Confluence pages using Python (requests) in HTML and RST format, including embedded pictures and attachments.
+References to downloaded files will be updated to their local relative path.
 
 ## Refactoring in Progress
 
