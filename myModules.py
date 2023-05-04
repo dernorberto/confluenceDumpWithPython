@@ -256,13 +256,15 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
 <body>
 <h2>""" + argTitle + """</h2>
 <p>Original URL: <a href=\"""" + pageUrl + """\"> """+argTitle+"""</a><hr>"""
+
+    myFooter = """</body>
+</html>"""
     #
     # At the end of the page, put a link to all attachments.
     #
     if len(myAttachments) > 0:
         myPreFooter = "<h2>Attachments</h2><ol>"
         for attachment in myAttachments:
-            #myPreFooter += ("""<a href=\"""" + os.path.join(attachDir,attachment) + """\"> """ + attachment + """</a></br>""")
             myPreFooter += ("""<li><a href=\"""" + os.path.join(attachDir,attachment) + """\"> """ + attachment + """</a></li>""")
         myPreFooter +=  "</ol></br>"
     #
@@ -274,7 +276,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     htmlFile.write(prettyHTML)
     if len(myAttachments) > 0:
         htmlFile.write(myPreFooter)
-    htmlFile.write(setFooterHTML())
+    htmlFile.write(myFooter)
     htmlFile.close()
     print("Exported HTML file " + htmlFilePath)
     #
@@ -287,46 +289,19 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     except:
         print("There was an issue generating an RST file from the page.")
     else:
-        rstPageHeader = setRstHeader(argPageLabels)
+        ##
+        ## RST Header with Page Metadata
+        ##
+        rstPageHeader = """.. tags:: """ + str(argPageLabels) + """
+
+.. meta::
+    :confluencePageId: """ + str(argPageId) + """
+    :confluencePageLabels: """ + str(argPageLabels) + """
+    :confluencePageParent: """ + str(argPageParent) + """
+
+"""
         rstFile = open(rstFilePath, 'w')
         rstFile.write(rstPageHeader)            # assing .. tags:: to rst file for future reference
         rstFile.write(outputRST)
         rstFile.close()
         print("Exported RST file: " + rstFileName)
-
-
-#
-# Define HTML page header
-#
-def setHtmlHeader(argTitle,argURL,argLabels,argPageId,argOutdirStyles):     # not in use
-    myHeader = """<html>
-<head>
-<title>""" + argTitle + """</title>
-<link rel="stylesheet" href=\"""" + argOutdirStyles + """site.css" type="text/css" />
-<meta name="generator" content="confluenceExportHTML" />
-<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta name="labels" content=\"""" + str(argLabels) + """\">
-<meta name="pageID" content=\"""" + str(argPageId) + """\">
-</head>
-<body>
-<h2>""" + argTitle + """</h2>
-<p>Original URL: <a href=\"""" + argURL + """\"> """+argTitle+"""</a><hr>"""
-    return(myHeader)
-
-#
-# Define HTML page footer
-#
-def setFooterHTML():
-    n = """</body>
-</html>"""
-    return(n)
-
-
-#
-# Define RST file header
-#
-def setRstHeader(argLabels):
-    myHeader = """.. tags:: """ + str(argLabels) + """
-
-"""
-    return(myHeader)
