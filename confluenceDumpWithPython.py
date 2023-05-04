@@ -171,10 +171,10 @@ elif args.mode == 'pageprops':
         myChildExportViewHtml = myChildExportView['body']['export_view']['value']
         myChildExportViewName = myPagePropertiesChildrenDict[p]['Name']
         myChildExportViewLabels = myModules.getPageLabels(atlassianSite,p,userName,apiToken)
-        myChildExportViewTitle = myChildExportView['title'].replace("/","-")
+        myChildExportViewTitle = myChildExportView['title'].replace("/","-").replace(":","-").replace(" ","_")
         myChildExportPageURL = str(myChildExportView['_links']['base']) + str(myChildExportView['_links']['webui'])
         myChildExportPageParent = myModules.getPageParent(atlassianSite,p,userName,apiToken)
-        htmlFileName = myPagePropertiesChildrenDict[p]['Name'] + '.html'
+        htmlFileName = myPagePropertiesChildrenDict[p]['Name'].replace(":","-").replace(" ","_") + '.html'
         myPagePropertiesChildrenDict[str(p)].update({"Filename": htmlFileName})
 
         myModules.dumpHtml(atlassianSite,myChildExportViewHtml,myChildExportViewTitle,p,myOutdir,myChildExportViewLabels,myChildExportPageParent,userName,apiToken,"child",htmlFileName)                  # creates html files for every child

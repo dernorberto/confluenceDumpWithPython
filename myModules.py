@@ -304,4 +304,4 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         rstFile.write(rstPageHeader)            # assing .. tags:: to rst file for future reference
         rstFile.write(outputRST)
         rstFile.close()
-        print("Exported RST file: " + rstFileName)
+        print("Exported RST file: " + rstFilePath)
