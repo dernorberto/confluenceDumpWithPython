@@ -21,7 +21,9 @@ parser.add_argument('--page', '-p', type=int,
 parser.add_argument('--label', '-l', type=str,
                     help='Page label')
 parser.add_argument('--outdir', '-o', type=str, default='output',
-                    help='Folder for expoert', required=False)
+                    help='Folder for export', required=False)
+parser.add_argument('--sphinx', '-x', type=bool, default=True,
+                    help='Sphinx compatible folder structure', required=False)
 args = parser.parse_args()
 atlassianSite = args.site
 myOutdir = args.outdir
@@ -48,6 +50,7 @@ myEmoticonsList = []
 userName = os.environ["atlassianUserEmail"]
 apiToken = os.environ["atlassianAPIToken"]
 
+sphinxCompatible = args.sphinx
 atlassianSite = args.site
 myOutdir = args.outdir
 if args.mode == 'single':
@@ -64,13 +67,14 @@ if args.mode == 'single':
     pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
     pageParent = myModules.getPageParent(atlassianSite,pageId,userName,apiToken)
 
-    myOutdir = os.path.join(myOutdir,str(pageId) + "-" + str(myBodyExportViewTitle))
+    #myOutdir = myOutdir    # let's keep outdir as it is, which by default is output/
+    myOutdirContent = os.path.join(myOutdir,str(pageId) + "-" + str(myBodyExportViewTitle))
     print("myOutdir: " + myOutdir)
     myOutdirs = []
     myOutdirs = myModules.mkOutdirs(myOutdir)               # attachments, embeds, scripts
     #myAttachments = myModules.getAttachments(atlassianSite,pageId,str(myOutdirs[0]),userName,apiToken)         # dumpHtml alreay runs getAttachments
     myPageLabels = myModules.getPageLabels(atlassianSite,pageId,userName,apiToken)
-    myModules.dumpHtml(atlassianSite,myBodyExportViewHtml,myBodyExportViewTitle,pageId,myOutdir,myPageLabels,pageParent,userName,apiToken)
+    myModules.dumpHtml(atlassianSite,myBodyExportViewHtml,myBodyExportViewTitle,pageId,myOutdir,myPageLabels,pageParent,userName,apiToken,sphinxCompatible)
 elif args.mode == 'space':
     ###########
     ## SPACE ##
@@ -132,7 +136,7 @@ elif args.mode == 'space':
             myBodyExportViewLabels = ",".join(myModules.getPageLabels(atlassianSite,p['pageId'],userName,apiToken))
             myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
             #htmlPageHeader = myModules.setHtmlHeader(myBodyExportViewTitle,myPageURL,myBodyExportViewLabels,myOutdirs[2])
-            myModules.dumpHtml(atlassianSite,myBodyExportViewHtml,myBodyExportViewTitle,p['pageId'],myOutdir,myBodyExportViewLabels,p['parentId'],userName,apiToken)
+            myModules.dumpHtml(atlassianSite,myBodyExportViewHtml,myBodyExportViewTitle,p['pageId'],myOutdir,myBodyExportViewLabels,p['parentId'],userName,apiToken,sphinxCompatible)
 elif args.mode == 'pageprops':
     ###############
     ## PAGEPROPS ##
@@ -177,7 +181,7 @@ elif args.mode == 'pageprops':
         htmlFileName = myPagePropertiesChildrenDict[p]['Name'].replace(":","-").replace(" ","_") + '.html'
         myPagePropertiesChildrenDict[str(p)].update({"Filename": htmlFileName})
 
-        myModules.dumpHtml(atlassianSite,myChildExportViewHtml,myChildExportViewTitle,p,myOutdir,myChildExportViewLabels,myChildExportPageParent,userName,apiToken,"child",htmlFileName)                  # creates html files for every child
-    myModules.dumpHtml(atlassianSite,myReportExportViewHtml,myReportExportViewTitle,pageId,myOutdir, myReportExportViewLabels, myReportExportPageParent, userName, apiToken ,"report", myReportExportHtmlFilename)         # finally creating the HTML for the report page
+        myModules.dumpHtml(atlassianSite,myChildExportViewHtml,myChildExportViewTitle,p,myOutdir,myChildExportViewLabels,myChildExportPageParent,userName,apiToken,"child",htmlFileName,sphinxCompatible)                  # creates html files for every child
+    myModules.dumpHtml(atlassianSite,myReportExportViewHtml,myReportExportViewTitle,pageId,myOutdir, myReportExportViewLabels, myReportExportPageParent, userName, apiToken ,"report", myReportExportHtmlFilename,sphinxCompatible)         # finally creating the HTML for the report page
 else:
     print("No script mode defined in the command line")

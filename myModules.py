@@ -27,7 +27,6 @@ scriptDir = os.path.dirname(os.path.abspath(__file__))
 attachDir = "_images/"
 emoticonsDir = "_images/"
 stylesDir = "_static/"
-
 #
 # Create the output folders, set to match Sphynx structure
 #
@@ -42,6 +41,7 @@ def mkOutdirs(argOutdir="output"):       # setting default to output
     outdirAttach = outdirList[0]
     outdirEmoticons = outdirList[1]
     outdirStyles = outdirList[2]
+
 
     if not os.path.exists(argOutdir):
         os.mkdir(argOutdir)
@@ -155,12 +155,17 @@ def getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)
     return[myPagePropertiesChildren,myPagePropertiesChildrenDict]
 
 
-def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageParent,argUserName,argApiToken,argType="common",argHtmlFileName=""):
+def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageParent,argUserName,argApiToken,argType="common",argHtmlFileName="",argSphinxCompatible=True):
     myEmoticonsList = []
-    myOutdirs = mkOutdirs(argOutdir)
+    myOutdirContent = os.path.join(argOutdir,str(argPageId) + "-" + str(argTitle))      # this is for html and rst files
+    if not os.path.exists(myOutdirContent):
+        os.mkdir(myOutdirContent)
+    #myOutdir = os.path.join(argOutdir,str(argPageId) + "-" + str(argTitle))
+    myOutdirs = mkOutdirs(argOutdir)        # this is for everything for _images and _static
+
     soup = bs(argHTML, "html.parser")
     htmlFileName = str(argTitle) + '.html'
-    htmlFilePath = os.path.join(argOutdir,htmlFileName)
+    htmlFilePath = os.path.join(myOutdirContent,htmlFileName)
     myAttachments = getAttachments(argSite,argPageId,str(myOutdirs[0]),argUserName,argApiToken)
     #
     # used for pageprops mode
@@ -169,7 +174,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         #myReportChildrenDict = getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[1]              # get list of all page properties children
         #myReportChildrenDict[argPageId].update({"Filename": argHtmlFileName})
     if (argType == "report"):
-        myReportChildrenDict= getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[1]      # dict
+        myReportChildrenDict= getPagePropertiesChildren(argSite,argHTML,myOutdirContent,argUserName,argApiToken)[1]      # dict
         myPagePropertiesItems = soup.findAll('td',class_="title")       # list
         for item in myPagePropertiesItems:
             id = item['data-content-id']
@@ -184,7 +189,10 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         origEmbedExternalName = origEmbedExternalPath.rsplit('/',1)[-1].rsplit('?')[0]      # just the file name
         myEmbedExternalName = str(argPageId) + "-" + str(myEmbedsExternalsCounter) + "-" + requests.utils.unquote(origEmbedExternalName).replace(" ", "_").replace(":","-")    # local filename
         myEmbedExternalPath = os.path.join(myOutdirs[0],myEmbedExternalName)        # local filename and path
-        myEmbedExternalPathRelative = os.path.join(attachDir,myEmbedExternalName)
+        if argSphinxCompatible == True:
+            myEmbedExternalPathRelative = os.path.join(str('../' + myOutdirs[0]),myEmbedExternalName)
+        else:
+            myEmbedExternalPathRelative = os.path.join(myOutdirs[0],myEmbedExternalName)
         toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
         try:
             open(myEmbedExternalPath,'wb').write(toDownload.content)
@@ -201,6 +209,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         embedExt['src'] = str(myEmbedExternalPathRelative)
         embedExt['data-image-src'] = str(myEmbedExternalPathRelative)
         myEmbedsExternalsCounter = myEmbedsExternalsCounter + 1
+
     #
     # dealing with "confluence-embedded-image"
     #
@@ -211,7 +220,10 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]      # online file name
         myEmbedName = requests.utils.unquote(origEmbedName).replace(" ", "_")    # local file name
         myEmbedPath = myOutdirs[0] + myEmbedName                            # local file path
-        myEmbedPathRelative = attachDir + myEmbedName
+        if argSphinxCompatible == True:
+            myEmbedPathRelative = '../' + myOutdirs[0] + myEmbedName
+        else:
+            myEmbedPathRelative = myOutdirs[0] + myEmbedName
         try:
             img = Image.open(myEmbedPath)
         except:
@@ -225,6 +237,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
             embed['height'] = "auto"
             embed['onclick'] = "window.open(\"" + myEmbedPathRelative + "\")"
             embed['src'] = myEmbedPathRelative
+
     #
     # dealing with "emoticon"
     #
@@ -233,7 +246,10 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     for emoticon in myEmoticons:
         requestEmoticons = requests.get(emoticon['src'], auth=(argUserName, argApiToken))
         myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]     # just filename
-        myEmoticonPath = emoticonsDir + myEmoticonTitle
+        if argSphinxCompatible == True:
+            myEmoticonPath = '../' + emoticonsDir + myEmoticonTitle
+        else:
+            myEmoticonPath = emoticonsDir + myEmoticonTitle
         if myEmoticonTitle not in myEmoticonsList:
             myEmoticonsList.append(myEmoticonTitle)
             print("Getting emoticon: " + myEmoticonTitle)
@@ -241,12 +257,17 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
             open(filePath, 'wb').write(requestEmoticons.content)
             #print("myEmoticonPath = " + myEmoticonPath)
         emoticon['src'] = myEmoticonPath
+
     myBodyExportView = getBodyExportView(argSite,argPageId,argUserName,argApiToken).json()
     pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
+    if argSphinxCompatible == True:
+        stylesDirRelative = str("../" + stylesDir)
+    else:
+        stylesDirRelative = stylesDir
     myHeader = """<html>
 <head>
 <title>""" + argTitle + """</title>
-<link rel="stylesheet" href=\"""" + stylesDir + """confluence.css" type="text/css" />
+<link rel="stylesheet" href=\"""" + stylesDirRelative + """confluence.css" type="text/css" />
 <meta name="generator" content="confluenceExportHTML" />
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="ConfluencePageLabels" content=\"""" + str(argPageLabels) + """\">
@@ -262,6 +283,10 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     #
     # At the end of the page, put a link to all attachments.
     #
+    if argSphinxCompatible == True:
+        attachDir = "../" + myOutdirs[0]
+    else:
+        attachDir = myOutdirs[0]
     if len(myAttachments) > 0:
         myPreFooter = "<h2>Attachments</h2><ol>"
         for attachment in myAttachments:
@@ -283,7 +308,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     # convert html to rst
     #
     rstFileName = str(argTitle) + '.rst'
-    rstFilePath = os.path.join(argOutdir,rstFileName)
+    rstFilePath = os.path.join(myOutdirContent,rstFileName)
     try:
         outputRST = pypandoc.convert_file(str(htmlFilePath), 'rst', format='html',extra_args=['--standalone','--wrap=none','--list-tables'])
     except:
