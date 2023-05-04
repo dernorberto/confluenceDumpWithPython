@@ -55,8 +55,8 @@ def mkOutdirs(argOutdir="output"):       # setting default to output
     if not os.path.exists(outdirStyles):
         os.mkdir(outdirStyles)
 
-    if not os.path.exists(outdirStyles + '/site.css'):
-        os.system('cp ' + scriptDir + '/styles/site.css "' + outdirStyles + '"')
+    if not os.path.exists(outdirStyles + '/confluence.css'):
+        os.system('cp ' + scriptDir + '/styles/confluence.css "' + outdirStyles + '"')
     return(outdirList)
 
 def getSpaceTitle(argSite,argSpaceId,argUsername,argApiToken):
@@ -246,7 +246,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     myHeader = """<html>
 <head>
 <title>""" + argTitle + """</title>
-<link rel="stylesheet" href=\"""" + stylesDir + """site.css" type="text/css" />
+<link rel="stylesheet" href=\"""" + stylesDir + """confluence.css" type="text/css" />
 <meta name="generator" content="confluenceExportHTML" />
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="ConfluencePageLabels" content=\"""" + str(argPageLabels) + """\">
