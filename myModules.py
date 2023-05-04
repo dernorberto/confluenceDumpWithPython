@@ -112,7 +112,7 @@ def getAttachments(argSite,argPageId,argOutdirAttach,argUsername,argApiToken):
     response = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30)
     myAttachments = response.json()['children']['attachment']['results']
     for attachment in myAttachments:
-        attachmentTitle = requests.utils.unquote(attachment['title'])
+        attachmentTitle = requests.utils.unquote(attachment['title']).replace(" ","_").replace(":","-")         # I want attachments without spaces
         print("Downloading: " + attachmentTitle)
         #attachmentTitle = n['title']
         #attachmentTitle = attachmentTitle.replace(":","-").replace(" ","_").replace("%20","_")          # replace offending characters from file name
@@ -182,9 +182,9 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     for embedExt in myEmbedsExternals:
         origEmbedExternalPath = embedExt['src']     # online link to file
         origEmbedExternalName = origEmbedExternalPath.rsplit('/',1)[-1].rsplit('?')[0]      # just the file name
-        myEmbedExternalName = str(argPageId) + "-" + str(myEmbedsExternalsCounter) + "-" + requests.utils.unquote(origEmbedExternalName)    # local filename
-        myEmbedExternalPath = os.path.join(myOutdirs[0],myEmbedExternalName).replace(":","-")        # local filename and path
-        myEmbedExternalPathRelative = os.path.join(attachDir,myEmbedExternalName).replace(":","-")
+        myEmbedExternalName = str(argPageId) + "-" + str(myEmbedsExternalsCounter) + "-" + requests.utils.unquote(origEmbedExternalName).replace(" ", "_").replace(":","-")    # local filename
+        myEmbedExternalPath = os.path.join(myOutdirs[0],myEmbedExternalName)        # local filename and path
+        myEmbedExternalPathRelative = os.path.join(attachDir,myEmbedExternalName)
         toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
         try:
             open(myEmbedExternalPath,'wb').write(toDownload.content)
@@ -209,7 +209,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     for embed in myEmbeds:
         origEmbedPath = embed['src']        # online link to file
         origEmbedName = origEmbedPath.rsplit('/',1)[-1].rsplit('?')[0]      # online file name
-        myEmbedName = requests.utils.unquote(origEmbedName)                 # local file name
+        myEmbedName = requests.utils.unquote(origEmbedName).replace(" ", "_")    # local file name
         myEmbedPath = myOutdirs[0] + myEmbedName                            # local file path
         myEmbedPathRelative = attachDir + myEmbedName
         try:
