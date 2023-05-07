@@ -27,21 +27,32 @@ scriptDir = os.path.dirname(os.path.abspath(__file__))
 attachDir = "_images/"
 emoticonsDir = "_images/"
 stylesDir = "_static/"
+
+def setVariables():
+    dictVars = {}
+    dictVars['attachDir'] = "_images/"
+    dictVars['emoticonsDir'] = "_images/"
+    dictVars['stylesDir'] = "_static/"
+    attachDir = "_images/"
+    emoticonsDir = "_images/"
+    stylesDir = "_static/"
+    return(dictVars)
 #
 # Create the output folders, set to match Sphynx structure
 #
 def setDirs(argOutdir="output"):        # setting default to output
-    outdirAttach = os.path.join(argOutdir,attachDir)
-    outdirEmoticons = os.path.join(argOutdir,emoticonsDir)
-    outdirStyles = os.path.join(argOutdir,stylesDir)
+    myVars = setVariables()
+    outdirAttach = os.path.join(argOutdir,myVars['attachDir'])
+    outdirEmoticons = os.path.join(argOutdir,myVars['emoticonsDir'])
+    outdirStyles = os.path.join(argOutdir,myVars['stylesDir'])
     return[outdirAttach, outdirEmoticons, outdirStyles]      # returns a list
 
 def mkOutdirs(argOutdir="output"):       # setting default to output
+    myVars = setVariables()
     outdirList = setDirs(argOutdir)
     outdirAttach = outdirList[0]
     outdirEmoticons = outdirList[1]
     outdirStyles = outdirList[2]
-
 
     if not os.path.exists(argOutdir):
         os.mkdir(argOutdir)
@@ -69,7 +80,6 @@ def getSpacesAll(argSite,argUsername,argApiToken):
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/spaces/?limit=250'
     response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30)
     response.raise_for_status()  # raises exception when not a 2xx response
-    print(response.json().keys())
     spaceList = response.json()['results']
     while 'next' in response.json()['_links'].keys():
         #print(str(response.json()['_links']))
@@ -155,13 +165,17 @@ def getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)
     return[myPagePropertiesChildren,myPagePropertiesChildrenDict]
 
 
-def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageParent,argUserName,argApiToken,argType="common",argHtmlFileName="",argSphinxCompatible=True):
+def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdirBase,argOutdirContent,argPageLabels,argPageParent,argUserName,argApiToken,argSphinxCompatible=True,argType="common"):
+    myVars = setVariables()
+    print("myModules.py receiving arg argSphinxCompatible = " + str(argSphinxCompatible))
     myEmoticonsList = []
-    myOutdirContent = os.path.join(argOutdir,str(argPageId) + "-" + str(argTitle))      # this is for html and rst files
+    myOutdirContent = argOutdirContent
+    #myOutdirContent = os.path.join(argOutdirBase,str(argPageId) + "-" + str(argTitle))      # this is for html and rst files
     if not os.path.exists(myOutdirContent):
         os.mkdir(myOutdirContent)
     #myOutdir = os.path.join(argOutdir,str(argPageId) + "-" + str(argTitle))
-    myOutdirs = mkOutdirs(argOutdir)        # this is for everything for _images and _static
+    myOutdirs = mkOutdirs(argOutdirBase)        # this is for everything for _images and _static
+    myVars = setVariables()     # create a dict with the 3 folder paths: attach, emoticons, styles
 
     soup = bs(argHTML, "html.parser")
     htmlFileName = str(argTitle) + '.html'
@@ -190,9 +204,9 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         myEmbedExternalName = str(argPageId) + "-" + str(myEmbedsExternalsCounter) + "-" + requests.utils.unquote(origEmbedExternalName).replace(" ", "_").replace(":","-")    # local filename
         myEmbedExternalPath = os.path.join(myOutdirs[0],myEmbedExternalName)        # local filename and path
         if argSphinxCompatible == True:
-            myEmbedExternalPathRelative = os.path.join(str('../' + myOutdirs[0]),myEmbedExternalName)
+            myEmbedExternalPathRelative = os.path.join(str('../' + myVars['attachDir']),myEmbedExternalName)
         else:
-            myEmbedExternalPathRelative = os.path.join(myOutdirs[0],myEmbedExternalName)
+            myEmbedExternalPathRelative = os.path.join(myVars['attachDir'],myEmbedExternalName)
         toDownload = requests.get(origEmbedExternalPath, allow_redirects=True)
         try:
             open(myEmbedExternalPath,'wb').write(toDownload.content)
@@ -221,9 +235,9 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         myEmbedName = requests.utils.unquote(origEmbedName).replace(" ", "_")    # local file name
         myEmbedPath = myOutdirs[0] + myEmbedName                            # local file path
         if argSphinxCompatible == True:
-            myEmbedPathRelative = '../' + myOutdirs[0] + myEmbedName
+            myEmbedPathRelative = '../' + myVars['attachDir'] + myEmbedName
         else:
-            myEmbedPathRelative = myOutdirs[0] + myEmbedName
+            myEmbedPathRelative = myVars['attachDir'] + myEmbedName
         try:
             img = Image.open(myEmbedPath)
         except:
@@ -247,23 +261,22 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
         requestEmoticons = requests.get(emoticon['src'], auth=(argUserName, argApiToken))
         myEmoticonTitle = emoticon['src'].rsplit('/',1)[-1]     # just filename
         if argSphinxCompatible == True:
-            myEmoticonPath = '../' + emoticonsDir + myEmoticonTitle
+            myEmoticonPath = '../' + myVars['emoticonsDir'] + myEmoticonTitle
         else:
-            myEmoticonPath = emoticonsDir + myEmoticonTitle
+            myEmoticonPath = myVars['emoticonsDir'] + myEmoticonTitle
         if myEmoticonTitle not in myEmoticonsList:
             myEmoticonsList.append(myEmoticonTitle)
             print("Getting emoticon: " + myEmoticonTitle)
             filePath = os.path.join(myOutdirs[1],myEmoticonTitle)
             open(filePath, 'wb').write(requestEmoticons.content)
-            #print("myEmoticonPath = " + myEmoticonPath)
         emoticon['src'] = myEmoticonPath
 
     myBodyExportView = getBodyExportView(argSite,argPageId,argUserName,argApiToken).json()
     pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
     if argSphinxCompatible == True:
-        stylesDirRelative = str("../" + stylesDir)
+        stylesDirRelative = str("../" + myVars['stylesDir'])
     else:
-        stylesDirRelative = stylesDir
+        stylesDirRelative = myVars['stylesDir']
     myHeader = """<html>
 <head>
 <title>""" + argTitle + """</title>
@@ -284,9 +297,9 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdir,argPageLabels,argPageP
     # At the end of the page, put a link to all attachments.
     #
     if argSphinxCompatible == True:
-        attachDir = "../" + myOutdirs[0]
+        attachDir = "../" + myVars['attachDir']
     else:
-        attachDir = myOutdirs[0]
+        attachDir = myVars['attachDir']
     if len(myAttachments) > 0:
         myPreFooter = "<h2>Attachments</h2><ol>"
         for attachment in myAttachments:
