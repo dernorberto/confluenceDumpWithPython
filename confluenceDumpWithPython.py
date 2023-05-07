@@ -37,9 +37,6 @@ elif args.mode == 'bylabel':
 elif args.mode == 'pageprops':
     print("Exporting a Page Properties page with all its children (Sphinx set to " + str(args.sphinx) + ")")
 
-
-#print('Site: ' + args.site +  args.mode, args.site, args.page, args.outdir)
-
 myAttachments = []
 myEmbeds = []
 myEmbedsExternals = []
@@ -50,7 +47,7 @@ userName = os.environ["atlassianUserEmail"]
 apiToken = os.environ["atlassianAPIToken"]
 
 sphinxCompatible = args.sphinx
-print("argument sphinxCompatible = " + str(sphinxCompatible))
+print("Sphinx set to " + str(sphinxCompatible))
 atlassianSite = args.site
 myOutdirBase = args.outdir
 if args.mode == 'single':
@@ -67,18 +64,16 @@ if args.mode == 'single':
     pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
     pageParent = myModules.getPageParent(atlassianSite,pageId,userName,apiToken)
 
-    #myOutdir = myOutdir    # let's keep outdir as it is, which by default is output/
     if args.sphinx == False:
         myOutdirBase = os.path.join(myOutdirBase,str(pageId) + "-" + str(myBodyExportViewTitle))        # sets outdir to path under pagename
-    # if sphinx == True, then myOutdirBase remains the same, which is by default the output folder
     myOutdirContent = os.path.join(myOutdirBase,str(pageId) + "-" + str(myBodyExportViewTitle))         # name of the folder for the page content
-    print("myOutdirBase: " + myOutdirBase)
-    print("myOutdirContent: " + myOutdirContent)
+    #print("myOutdirBase: " + myOutdirBase)
+    #print("myOutdirContent: " + myOutdirContent)
     myOutdirs = []
     myOutdirs = myModules.mkOutdirs(myOutdirBase)               # attachments, embeds, scripts
-    #myAttachments = myModules.getAttachments(atlassianSite,pageId,str(myOutdirs[0]),userName,apiToken)         # dumpHtml alreay runs getAttachments
     myPageLabels = myModules.getPageLabels(atlassianSite,pageId,userName,apiToken)
     myModules.dumpHtml(atlassianSite,myBodyExportViewHtml,myBodyExportViewTitle,pageId,myOutdirBase, myOutdirContent,myPageLabels,pageParent,userName,apiToken,sphinxCompatible)
+    print("Done!")
 elif args.mode == 'space':
     ###########
     ## SPACE ##
@@ -104,12 +99,10 @@ elif args.mode == 'space':
     if not os.path.exists(myOutdirContent):
         os.mkdir(myOutdirContent)
     if args.sphinx == False:
-        #myOutdirBase = os.path.join(myOutdir,str(spaceId) + "-" + str(spaceName))        # sets outdir to path under pagename
         myOutdirBase = myOutdirContent
-    #myOutdirs = myModules.mkOutdirs(myOutdir)                                       # attachments, embeds, scripts
 
-    print("myOutdirBase: " + myOutdirBase)
-    print("myOutdirContent: " + myOutdirContent)
+    #print("myOutdirBase: " + myOutdirBase)
+    #print("myOutdirContent: " + myOutdirContent)
 
     if spaceKey == "" or spaceKey == None:                                          # if the supplied space key can't be found
         print("Could not find Space Key in this site")
@@ -123,10 +116,6 @@ elif args.mode == 'space':
         i = 0
         for n in allPagesFull:
             i = i + 1
-            #print(i, n['id'], n['title'], n['parentId'], n['spaceId'])
-            #if n['parentId'] is None:               # only applies to TOP page
-            #    currentParent = n['id']         # sets the parent for the next IF statent
-            #    print('Parent page: ' + n['title'] + '(' + str(n['id']) + ')')
             allPagesShort.append({
                 'pageId' : n['id'],
                 'pageTitle' : n['title'],
@@ -147,9 +136,9 @@ elif args.mode == 'space':
             print("Getting page #" + str(pageCounter) + '/' + str(len(allPagesShort)) + ', ' + myBodyExportViewTitle + ', ' + str(p['pageId']))
             myBodyExportViewLabels = ",".join(myModules.getPageLabels(atlassianSite,p['pageId'],userName,apiToken))
             myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
-            #htmlPageHeader = myModules.setHtmlHeader(myBodyExportViewTitle,myPageURL,myBodyExportViewLabels,myOutdirs[2])
             print("dumpHtml arg sphinxCompatible = " + str(sphinxCompatible))
             myModules.dumpHtml(atlassianSite,myBodyExportViewHtml,myBodyExportViewTitle,p['pageId'],myOutdirBase,myOutdirContent,myBodyExportViewLabels,p['parentId'],userName,apiToken,sphinxCompatible)
+    print("Done!")
 elif args.mode == 'pageprops':
     ###############
     ## PAGEPROPS ##
@@ -170,25 +159,32 @@ elif args.mode == 'pageprops':
     myReportExportPageURL = str(myReportExportView['_links']['base']) + str(myReportExportView['_links']['webui'])
     myReportExportPageParent = myModules.getPageParent(atlassianSite,pageId,userName,apiToken)
     myReportExportHtmlFilename = str(myReportExportViewTitle) + '.html'
-
-    myPagePropertiesChildren = myModules.getPagePropertiesChildren(atlassianSite,myReportExportViewHtml,myOutdirContent,userName,apiToken)[0]          # list
-    myPagePropertiesChildrenDict = myModules.getPagePropertiesChildren(atlassianSite,myReportExportViewHtml,myOutdirContent,userName,apiToken)[1]      # dict
-
+    # my outdirs
     myOutdirContent = os.path.join(myOutdirBase,str(pageId) + "-" + str(myReportExportViewTitle))
-    print("myOutdirBase: " + myOutdirBase)
-    print("myOutdirContent: " + myOutdirContent)
+    #print("myOutdirBase: " + myOutdirBase)
+    #print("myOutdirContent: " + myOutdirContent)
+    if args.sphinx == False:
+        myOutdirBase = myOutdirContent
+
     myOutdirs = []
     myOutdirs = myModules.mkOutdirs(myOutdirBase)               # attachments, embeds, scripts
+    # get info abbout children
+    #myPagePropertiesChildren = myModules.getPagePropertiesChildren(atlassianSite,myReportExportViewHtml,myOutdirContent,userName,apiToken)[0]          # list
+    #myPagePropertiesChildrenDict = myModules.getPagePropertiesChildren(atlassianSite,myReportExportViewHtml,myOutdirContent,userName,apiToken)[1]      # dict
+    (myPagePropertiesChildren,myPagePropertiesChildrenDict) = myModules.getPagePropertiesChildren(atlassianSite,myReportExportViewHtml,myOutdirContent,userName,apiToken)
     #
     # Get Page Properties CHILDREN
     #
+    pageCounter = 0
     for p in myPagePropertiesChildren:
-        print("Handling child: " + p)
+        pageCounter = pageCounter + 1
+        #print("Handling child: " + p)
         myChildExportView = myModules.getBodyExportView(atlassianSite,p,userName,apiToken).json()
         myChildExportViewHtml = myChildExportView['body']['export_view']['value']
         myChildExportViewName = myPagePropertiesChildrenDict[p]['Name']
         myChildExportViewLabels = myModules.getPageLabels(atlassianSite,p,userName,apiToken)
         myChildExportViewTitle = myChildExportView['title'].replace("/","-").replace(":","-").replace(" ","_")
+        print("Getting Child page #" + str(pageCounter) + '/' + str(len(myPagePropertiesChildren)) + ', ' + myChildExportViewTitle + ', ' + myPagePropertiesChildrenDict[str(p)]['ID'])
         myChildExportPageURL = str(myChildExportView['_links']['base']) + str(myChildExportView['_links']['webui'])
         myChildExportPageParent = myModules.getPageParent(atlassianSite,p,userName,apiToken)
         htmlFileName = myPagePropertiesChildrenDict[p]['Name'].replace(":","-").replace(" ","_") + '.html'
@@ -196,5 +192,6 @@ elif args.mode == 'pageprops':
 
         myModules.dumpHtml(atlassianSite,myChildExportViewHtml,myChildExportViewTitle,p,myOutdirBase,myOutdirContent,myChildExportViewLabels,myChildExportPageParent,userName,apiToken,sphinxCompatible,"child")                  # creates html files for every child
     myModules.dumpHtml(atlassianSite,myReportExportViewHtml,myReportExportViewTitle,pageId,myOutdirBase,myOutdirContent,myReportExportViewLabels, myReportExportPageParent, userName, apiToken ,sphinxCompatible,"report")         # finally creating the HTML for the report page
+    print("Done!")
 else:
     print("No script mode defined in the command line")

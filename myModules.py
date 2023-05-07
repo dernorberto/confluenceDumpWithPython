@@ -95,7 +95,7 @@ def getPagesFromSpace(argSite,argSpaceId,argUsername,argApiToken):
     response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30)
     pageList = response.json()['results']
     while 'next' in response.json()['_links'].keys():
-        print(str(response.json()['_links']))
+        #@çprint(str(response.json()['_links']))
         cursorServerURL = serverURL + '&cursor' + response.json()['_links']['next'].split('cursor')[1]
         response = requests.get(cursorServerURL, auth=(argUsername,argApiToken),timeout=30)
         pageList = pageList + response.json()['results']
@@ -160,14 +160,13 @@ def getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)
         myPagePropertiesChildrenDict.update({ myPageID:{}})
         myPagePropertiesChildrenDict[myPageID].update({"ID": myPageID})
         myPagePropertiesChildrenDict[myPageID].update({"Name": myPageName})
-    print(str(myPagePropertiesItemsCounter) + " Pages")
-    print("Exporting to: " + argOutdir)
+    print(str(myPagePropertiesItemsCounter) + " Page Properties Children Pages")
+    #print("Exporting to: " + argOutdir)
     return[myPagePropertiesChildren,myPagePropertiesChildrenDict]
 
 
 def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdirBase,argOutdirContent,argPageLabels,argPageParent,argUserName,argApiToken,argSphinxCompatible=True,argType="common"):
     myVars = setVariables()
-    print("myModules.py receiving arg argSphinxCompatible = " + str(argSphinxCompatible))
     myEmoticonsList = []
     myOutdirContent = argOutdirContent
     #myOutdirContent = os.path.join(argOutdirBase,str(argPageId) + "-" + str(argTitle))      # this is for html and rst files
