@@ -16,6 +16,7 @@ Nonetheless, the refactoring will require only 2 files and accept command-line a
   * `-s, --space`: The Space Key (if needed).
   * `-p, --page`: The Page ID (if needed).
   * `-l, --label`: The Page label (if needed).
+  * `-x, --sphinx`: The `_images` and `_static` folder are placed at the root of the export folder, instead of together with the exported HTML files.
 
 ## Description
 
