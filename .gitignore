@@ -2,4 +2,3 @@ lib/
 bin/
 output/
 .venv/
-.DS_Store
