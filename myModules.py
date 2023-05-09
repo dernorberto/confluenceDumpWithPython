@@ -28,7 +28,7 @@ attachDir = "_images/"
 emoticonsDir = "_images/"
 stylesDir = "_static/"
 
-def setVariables():
+def set_variables():
     dictVars = {}
     dictVars['attachDir'] = "_images/"
     dictVars['emoticonsDir'] = "_images/"
@@ -40,16 +40,16 @@ def setVariables():
 #
 # Create the output folders, set to match Sphynx structure
 #
-def setDirs(argOutdir="output"):        # setting default to output
-    myVars = setVariables()
+def set_dirs(argOutdir="output"):        # setting default to output
+    myVars = set_variables()
     outdirAttach = os.path.join(argOutdir,myVars['attachDir'])
     outdirEmoticons = os.path.join(argOutdir,myVars['emoticonsDir'])
     outdirStyles = os.path.join(argOutdir,myVars['stylesDir'])
     return[outdirAttach, outdirEmoticons, outdirStyles]      # returns a list
 
-def mkOutdirs(argOutdir="output"):       # setting default to output
-    myVars = setVariables()
-    outdirList = setDirs(argOutdir)
+def mk_outdirs(argOutdir="output"):       # setting default to output
+    myVars = set_variables()
+    outdirList = set_dirs(argOutdir)
     outdirAttach = outdirList[0]
     outdirEmoticons = outdirList[1]
     outdirStyles = outdirList[2]
@@ -70,12 +70,12 @@ def mkOutdirs(argOutdir="output"):       # setting default to output
         os.system('cp ' + scriptDir + '/styles/confluence.css "' + outdirStyles + '"')
     return(outdirList)
 
-def getSpaceTitle(argSite,argSpaceId,argUsername,argApiToken):
+def get_space_title(argSite,argSpaceId,argUsername,argApiToken):
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/spaces/' + str(argSpaceId)
     response = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30).json()['name']
     return(response)
 
-def getSpacesAll(argSite,argUsername,argApiToken):
+def get_spaces_all(argSite,argUsername,argApiToken):
     #spaceList = []
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/spaces/?limit=250'
     response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30)
@@ -89,7 +89,7 @@ def getSpacesAll(argSite,argUsername,argApiToken):
         spaceList = spaceList + response.json()['results']
     return(spaceList)
 
-def getPagesFromSpace(argSite,argSpaceId,argUsername,argApiToken):
+def get_pages_from_space(argSite,argSpaceId,argUsername,argApiToken):
     pageList = []
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/spaces/' + str(argSpaceId) + '/pages?status=current&limit=250'
     response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30)
@@ -101,22 +101,22 @@ def getPagesFromSpace(argSite,argSpaceId,argUsername,argApiToken):
         pageList = pageList + response.json()['results']
     return(pageList)
 
-def getBodyExportView(argSite,argPageId,argUsername,argApiToken):
+def get_body_export_view(argSite,argPageId,argUsername,argApiToken):
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageId) + '?expand=body.export_view'
     response = requests.get(serverURL, auth=(argUsername, argApiToken))
     return(response)
 
-def getPageName(argSite,argPageId,argUsername,argApiToken):
+def get_page_name(argSite,argPageId,argUsername,argApiToken):
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageId)
     r_pagetree = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30)
     return(r_pagetree.json()['id'] + "_" + r_pagetree.json()['title'])
 
-def getPageParent(argSite,argPageId,argUsername,argApiToken):
+def get_page_parent(argSite,argPageId,argUsername,argApiToken):
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/pages/' + str(argPageId)
     response = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30)
     return(response.json()['parentId'])
 
-def getAttachments(argSite,argPageId,argOutdirAttach,argUsername,argApiToken):
+def get_attachments(argSite,argPageId,argOutdirAttach,argUsername,argApiToken):
     myAttachmentsList = []
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/rest/api/content/' + str(argPageId) + '?expand=children.attachment'
     response = requests.get(serverURL, auth=(argUsername, argApiToken),timeout=30)
@@ -137,7 +137,7 @@ def getAttachments(argSite,argPageId,argOutdirAttach,argUsername,argApiToken):
     return(myAttachmentsList)
 
 # get page labels
-def getPageLabels(argSite,argPageId,argUsername,argApiToken):
+def get_page_labels(argSite,argPageId,argUsername,argApiToken):
     htmlLabels = []
     serverURL = 'https://' + argSite + '.atlassian.net/wiki/api/v2/pages/' + str(argPageId) + '/labels'
     response = requests.get(serverURL, auth=(argUsername,argApiToken),timeout=30).json()
@@ -146,7 +146,7 @@ def getPageLabels(argSite,argPageId,argUsername,argApiToken):
     htmlLabels = ",".join(htmlLabels)
     return(htmlLabels)
 
-def getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken):
+def get_page_properties_children(argSite,argHTML,argOutdir,argUserName,argApiToken):
     myPagePropertiesChildren = []
     myPagePropertiesChildrenDict = {}
     soup = bs(argHTML, "html.parser")
@@ -156,7 +156,7 @@ def getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)
         myPageID = str(n['data-content-id'])
         myPagePropertiesChildren.append(str(n['data-content-id']))
         myPagePropertiesItemsCounter = myPagePropertiesItemsCounter + 1
-        myPageName = getPageName(argSite,int(myPageID),argUserName,argApiToken).rsplit('_',1)[1].replace(":","-").replace(" ","_").replace("%20","_")          # replace offending characters from file name
+        myPageName = get_page_name(argSite,int(myPageID),argUserName,argApiToken).rsplit('_',1)[1].replace(":","-").replace(" ","_").replace("%20","_")          # replace offending characters from file name
         myPagePropertiesChildrenDict.update({ myPageID:{}})
         myPagePropertiesChildrenDict[myPageID].update({"ID": myPageID})
         myPagePropertiesChildrenDict[myPageID].update({"Name": myPageName})
@@ -165,29 +165,29 @@ def getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)
     return[myPagePropertiesChildren,myPagePropertiesChildrenDict]
 
 
-def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdirBase,argOutdirContent,argPageLabels,argPageParent,argUserName,argApiToken,argSphinxCompatible=True,argType="common"):
-    myVars = setVariables()
+def dump_html(argSite,argHTML,argTitle,argPageId,argOutdirBase,argOutdirContent,argPageLabels,argPageParent,argUserName,argApiToken,argSphinxCompatible=True,argType="common"):
+    myVars = set_variables()
     myEmoticonsList = []
     myOutdirContent = argOutdirContent
     #myOutdirContent = os.path.join(argOutdirBase,str(argPageId) + "-" + str(argTitle))      # this is for html and rst files
     if not os.path.exists(myOutdirContent):
         os.mkdir(myOutdirContent)
     #myOutdir = os.path.join(argOutdir,str(argPageId) + "-" + str(argTitle))
-    myOutdirs = mkOutdirs(argOutdirBase)        # this is for everything for _images and _static
-    myVars = setVariables()     # create a dict with the 3 folder paths: attach, emoticons, styles
+    myOutdirs = mk_outdirs(argOutdirBase)        # this is for everything for _images and _static
+    myVars = set_variables()     # create a dict with the 3 folder paths: attach, emoticons, styles
 
     soup = bs(argHTML, "html.parser")
     htmlFileName = str(argTitle) + '.html'
     htmlFilePath = os.path.join(myOutdirContent,htmlFileName)
-    myAttachments = getAttachments(argSite,argPageId,str(myOutdirs[0]),argUserName,argApiToken)
+    myAttachments = get_attachments(argSite,argPageId,str(myOutdirs[0]),argUserName,argApiToken)
     #
     # used for pageprops mode
     #
     #if (argType == "child"):
-        #myReportChildrenDict = getPagePropertiesChildren(argSite,argHTML,argOutdir,argUserName,argApiToken)[1]              # get list of all page properties children
+        #myReportChildrenDict = get_page_properties_children(argSite,argHTML,argOutdir,argUserName,argApiToken)[1]              # get list of all page properties children
         #myReportChildrenDict[argPageId].update({"Filename": argHtmlFileName})
     if (argType == "report"):
-        myReportChildrenDict= getPagePropertiesChildren(argSite,argHTML,myOutdirContent,argUserName,argApiToken)[1]      # dict
+        myReportChildrenDict= get_page_properties_children(argSite,argHTML,myOutdirContent,argUserName,argApiToken)[1]      # dict
         myPagePropertiesItems = soup.findAll('td',class_="title")       # list
         for item in myPagePropertiesItems:
             id = item['data-content-id']
@@ -270,7 +270,7 @@ def dumpHtml(argSite,argHTML,argTitle,argPageId,argOutdirBase,argOutdirContent,a
             open(filePath, 'wb').write(requestEmoticons.content)
         emoticon['src'] = myEmoticonPath
 
-    myBodyExportView = getBodyExportView(argSite,argPageId,argUserName,argApiToken).json()
+    myBodyExportView = get_body_export_view(argSite,argPageId,argUserName,argApiToken).json()
     pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
     if argSphinxCompatible == True:
         stylesDirRelative = str("../" + myVars['stylesDir'])
