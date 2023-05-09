@@ -25,173 +25,173 @@ parser.add_argument('--outdir', '-o', type=str, default='output',
 parser.add_argument('--sphinx', '-x', action='store_true', default=False,
                     help='Sphinx compatible folder structure', required=False)
 args = parser.parse_args()
-atlassianSite = args.site
+atlassian_site = args.site
 if args.mode == 'single':
     print("Exporting a single page (Sphinx set to " + str(args.sphinx) + ")")
-    pageId = args.page
+    page_id = args.page
 elif args.mode == 'space':
     print("Exporting a whole space (Sphinx set to " + str(args.sphinx) + ")")
-    spaceKey = args.space
+    space_key = args.space
 elif args.mode == 'bylabel':
     print("Exporting all pages with a common label (Sphinx set to " + str(args.sphinx) + ")")
 elif args.mode == 'pageprops':
     print("Exporting a Page Properties page with all its children (Sphinx set to " + str(args.sphinx) + ")")
 
-myAttachments = []
-myEmbeds = []
-myEmbedsExternals = []
-myEmoticons = []
-myEmoticonsList = []
+my_attachments = []
+my_embeds = []
+my_embeds_externals = []
+my_emoticons = []
+my_emoticons_list = []
 
-userName = os.environ["atlassianUserEmail"]
-apiToken = os.environ["atlassianAPIToken"]
+user_name = os.environ["atlassianUserEmail"]
+api_token = os.environ["atlassianapi_token"]
 
-sphinxCompatible = args.sphinx
-print("Sphinx set to " + str(sphinxCompatible))
-atlassianSite = args.site
-myOutdirBase = args.outdir
+sphinx_compatible = args.sphinx
+print("Sphinx set to " + str(sphinx_compatible))
+atlassian_site = args.site
+my_outdir_base = args.outdir
 if args.mode == 'single':
     ############
     ## SINGLE ##
     ############
-    pageId = args.page
-    pageName = myModules.get_page_name(atlassianSite,pageId,userName,apiToken)
+    page_id = args.page
+    page_name = myModules.get_page_name(atlassian_site,page_id,user_name,api_token)
 
-    myBodyExportView = myModules.get_body_export_view(atlassianSite,pageId,userName,apiToken).json()
-    myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']
-    myBodyExportViewTitle = myBodyExportView['title'].replace("/","-").replace(",","").replace("&","And").replace(":","-")
+    my_body_export_view = myModules.get_body_export_view(atlassian_site,page_id,user_name,api_token).json()
+    my_body_export_view_html = my_body_export_view['body']['export_view']['value']
+    my_body_export_view_title = my_body_export_view['title'].replace("/","-").replace(",","").replace("&","And").replace(":","-")
 
-    pageUrl = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
-    pageParent = myModules.get_page_parent(atlassianSite,pageId,userName,apiToken)
+    page_url = str(my_body_export_view['_links']['base']) + str(my_body_export_view['_links']['webui'])
+    page_parent = myModules.get_page_parent(atlassian_site,page_id,user_name,api_token)
 
     if args.sphinx == False:
-        myOutdirBase = os.path.join(myOutdirBase,str(pageId) + "-" + str(myBodyExportViewTitle))        # sets outdir to path under pagename
-    myOutdirContent = os.path.join(myOutdirBase,str(pageId) + "-" + str(myBodyExportViewTitle))         # name of the folder for the page content
-    #print("myOutdirBase: " + myOutdirBase)
-    #print("myOutdirContent: " + myOutdirContent)
-    myOutdirs = []
-    myOutdirs = myModules.mk_outdirs(myOutdirBase)               # attachments, embeds, scripts
-    myPageLabels = myModules.get_page_labels(atlassianSite,pageId,userName,apiToken)
-    myModules.dump_html(atlassianSite,myBodyExportViewHtml,myBodyExportViewTitle,pageId,myOutdirBase, myOutdirContent,myPageLabels,pageParent,userName,apiToken,sphinxCompatible)
+        my_outdir_base = os.path.join(my_outdir_base,str(page_id) + "-" + str(my_body_export_view_title))        # sets outdir to path under page_name
+    my_outdir_content = os.path.join(my_outdir_base,str(page_id) + "-" + str(my_body_export_view_title))         # name of the folder for the page content
+    #print("my_outdir_base: " + my_outdir_base)
+    #print("my_outdir_content: " + my_outdir_content)
+    my_outdirs = []
+    my_outdirs = myModules.mk_outdirs(my_outdir_base)               # attachments, embeds, scripts
+    my_page_labels = myModules.get_page_labels(atlassian_site,page_id,user_name,api_token)
+    myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,page_id,my_outdir_base, my_outdir_content,my_page_labels,page_parent,user_name,api_token,sphinx_compatible)
     print("Done!")
 elif args.mode == 'space':
     ###########
     ## SPACE ##
     ###########
-    allSpacesFull = myModules.get_spaces_all(atlassianSite,userName,apiToken)         # get a dump of all spaces
-    allSpacesShort = []                                                             # initialize list for less detailed list of spaces
+    all_spaces_full = myModules.get_spaces_all(atlassian_site,user_name,api_token)         # get a dump of all spaces
+    all_spaces_short = []                                                             # initialize list for less detailed list of spaces
     i = 0
-    for n in allSpacesFull:
+    for n in all_spaces_full:
         i = i +1
-        allSpacesShort.append({                                                     # append the list of spaces
-            'spaceKey' : n['key'],
-            'spaceId' : n['id'],
-            'spaceName' : n['name'],
-            'homepageId' : n['homepageId'],
+        all_spaces_short.append({                                                     # append the list of spaces
+            'space_key' : n['key'],
+            'space_id' : n['id'],
+            'space_name' : n['name'],
+            'homepage_id' : n['homepage_id'],
             'spaceDescription' : n['description'],
             })
-        if (n['key'] == spaceKey) or n['key'] == str.upper(spaceKey) or n['key'] == str.lower(spaceKey):
+        if (n['key'] == space_key) or n['key'] == str.upper(space_key) or n['key'] == str.lower(space_key):
             print("Found space: " + n['key'])
-            spaceId = n['id']
-            spaceName = n['name']
-            currentParent = n['homepageId']
-    myOutdirContent = os.path.join(myOutdirBase,str(spaceId) + "-" + str(spaceName))
-    if not os.path.exists(myOutdirContent):
-        os.mkdir(myOutdirContent)
+            space_id = n['id']
+            space_name = n['name']
+            current_parent = n['homepage_id']
+    my_outdir_content = os.path.join(my_outdir_base,str(space_id) + "-" + str(space_name))
+    if not os.path.exists(my_outdir_content):
+        os.mkdir(my_outdir_content)
     if args.sphinx == False:
-        myOutdirBase = myOutdirContent
+        my_outdir_base = my_outdir_content
 
-    #print("myOutdirBase: " + myOutdirBase)
-    #print("myOutdirContent: " + myOutdirContent)
+    #print("my_outdir_base: " + my_outdir_base)
+    #print("my_outdir_content: " + my_outdir_content)
 
-    if spaceKey == "" or spaceKey == None:                                          # if the supplied space key can't be found
+    if space_key == "" or space_key == None:                                          # if the supplied space key can't be found
         print("Could not find Space Key in this site")
     else:
-        spaceTitle = myModules.get_space_title(atlassianSite,spaceId,userName,apiToken)
+        space_title = myModules.get_space_title(atlassian_site,space_id,user_name,api_token)
         #
         # get list of pages from space
         #
-        allPagesFull = myModules.get_pages_from_space(atlassianSite,spaceId,userName,apiToken)
-        allPagesShort = []
+        all_pages_full = myModules.get_pages_from_space(atlassian_site,space_id,user_name,api_token)
+        all_pages_short = []
         i = 0
-        for n in allPagesFull:
+        for n in all_pages_full:
             i = i + 1
-            allPagesShort.append({
-                'pageId' : n['id'],
+            all_pages_short.append({
+                'page_id' : n['id'],
                 'pageTitle' : n['title'],
                 'parentId' : n['parentId'],
-                'spaceId' : n['spaceId'],
+                'space_id' : n['space_id'],
                 }
             )
         # put it all together
-        print(str(len(allPagesShort)) + ' pages to export')
-        pageCounter = 0
-        for p in allPagesShort:
-            pageCounter = pageCounter + 1
-            myBodyExportView = myModules.get_body_export_view(atlassianSite,p['pageId'],userName,apiToken).json()
-            myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']
-            myBodyExportViewName = p['pageTitle']
-            myBodyExportViewTitle = p['pageTitle'].replace("/","-").replace(",","").replace("&","And")
+        print(str(len(all_pages_short)) + ' pages to export')
+        page_counter = 0
+        for p in all_pages_short:
+            page_counter = page_counter + 1
+            my_body_export_view = myModules.get_body_export_view(atlassian_site,p['page_id'],user_name,api_token).json()
+            my_body_export_view_html = my_body_export_view['body']['export_view']['value']
+            my_body_export_view_name = p['pageTitle']
+            my_body_export_view_title = p['pageTitle'].replace("/","-").replace(",","").replace("&","And")
             print()
-            print("Getting page #" + str(pageCounter) + '/' + str(len(allPagesShort)) + ', ' + myBodyExportViewTitle + ', ' + str(p['pageId']))
-            myBodyExportViewLabels = ",".join(myModules.get_page_labels(atlassianSite,p['pageId'],userName,apiToken))
-            myPageURL = str(myBodyExportView['_links']['base']) + str(myBodyExportView['_links']['webui'])
-            print("dump_html arg sphinxCompatible = " + str(sphinxCompatible))
-            myModules.dump_html(atlassianSite,myBodyExportViewHtml,myBodyExportViewTitle,p['pageId'],myOutdirBase,myOutdirContent,myBodyExportViewLabels,p['parentId'],userName,apiToken,sphinxCompatible)
+            print("Getting page #" + str(page_counter) + '/' + str(len(all_pages_short)) + ', ' + my_body_export_view_title + ', ' + str(p['page_id']))
+            my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
+            mypage_url = str(my_body_export_view['_links']['base']) + str(my_body_export_view['_links']['webui'])
+            print("dump_html arg sphinx_compatible = " + str(sphinx_compatible))
+            myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,p['page_id'],my_outdir_base,my_outdir_content,my_body_export_view_labels,p['parentId'],user_name,api_token,sphinx_compatible)
     print("Done!")
 elif args.mode == 'pageprops':
     ###############
     ## PAGEPROPS ##
     ###############
-    myPagePropertiesChildren = []
-    myPagePropertiesChildrenDict = {}
+    my_page_properties_children = []
+    my_page_properties_children_dict = {}
 
-    pageId = args.page
+    page_id = args.page
     #
     # Get Page Properties REPORT
     #
     print("Getting Page Properties Report Details")
-    myReportExportView = myModules.get_body_export_view(atlassianSite,pageId,userName,apiToken).json()
-    myReportExportViewTitle = myReportExportView['title'].replace("/","-").replace(",","").replace("&","And").replace(":","-")
-    myReportExportViewHtml = myReportExportView['body']['export_view']['value']
-    myReportExportViewName = myModules.get_page_name(atlassianSite,pageId,userName,apiToken)
-    myReportExportViewLabels = myModules.get_page_labels(atlassianSite,pageId,userName,apiToken)
-    myReportExportPageURL = str(myReportExportView['_links']['base']) + str(myReportExportView['_links']['webui'])
-    myReportExportPageParent = myModules.get_page_parent(atlassianSite,pageId,userName,apiToken)
-    myReportExportHtmlFilename = str(myReportExportViewTitle) + '.html'
+    my_report_export_view = myModules.get_body_export_view(atlassian_site,page_id,user_name,api_token).json()
+    my_report_export_view_title = my_report_export_view['title'].replace("/","-").replace(",","").replace("&","And").replace(":","-")
+    my_report_export_view_html = my_report_export_view['body']['export_view']['value']
+    my_report_export_viewName = myModules.get_page_name(atlassian_site,page_id,user_name,api_token)
+    my_report_export_view_labels = myModules.get_page_labels(atlassian_site,page_id,user_name,api_token)
+    my_report_export_page_url = str(my_report_export_view['_links']['base']) + str(my_report_export_view['_links']['webui'])
+    my_report_export_page_parent = myModules.get_page_parent(atlassian_site,page_id,user_name,api_token)
+    my_report_export_html_filename = str(my_report_export_view_title) + '.html'
     # my outdirs
-    myOutdirContent = os.path.join(myOutdirBase,str(pageId) + "-" + str(myReportExportViewTitle))
-    #print("myOutdirBase: " + myOutdirBase)
-    #print("myOutdirContent: " + myOutdirContent)
+    my_outdir_content = os.path.join(my_outdir_base,str(page_id) + "-" + str(my_report_export_view_title))
+    #print("my_outdir_base: " + my_outdir_base)
+    #print("my_outdir_content: " + my_outdir_content)
     if args.sphinx == False:
-        myOutdirBase = myOutdirContent
+        my_outdir_base = my_outdir_content
 
-    myOutdirs = []
-    myOutdirs = myModules.mk_outdirs(myOutdirBase)               # attachments, embeds, scripts
+    my_outdirs = []
+    my_outdirs = myModules.mk_outdirs(my_outdir_base)               # attachments, embeds, scripts
     # get info abbout children
-    #myPagePropertiesChildren = myModules.get_page_properties_children(atlassianSite,myReportExportViewHtml,myOutdirContent,userName,apiToken)[0]          # list
-    #myPagePropertiesChildrenDict = myModules.get_page_properties_children(atlassianSite,myReportExportViewHtml,myOutdirContent,userName,apiToken)[1]      # dict
-    (myPagePropertiesChildren,myPagePropertiesChildrenDict) = myModules.get_page_properties_children(atlassianSite,myReportExportViewHtml,myOutdirContent,userName,apiToken)
+    #my_page_properties_children = myModules.get_page_properties_children(atlassian_site,my_report_export_view_html,my_outdir_content,user_name,api_token)[0]          # list
+    #my_page_properties_children_dict = myModules.get_page_properties_children(atlassian_site,my_report_export_view_html,my_outdir_content,user_name,api_token)[1]      # dict
+    (my_page_properties_children,my_page_properties_children_dict) = myModules.get_page_properties_children(atlassian_site,my_report_export_view_html,my_outdir_content,user_name,api_token)
     #
     # Get Page Properties CHILDREN
     #
-    pageCounter = 0
-    for p in myPagePropertiesChildren:
-        pageCounter = pageCounter + 1
+    page_counter = 0
+    for p in my_page_properties_children:
+        page_counter = page_counter + 1
         #print("Handling child: " + p)
-        myChildExportView = myModules.get_body_export_view(atlassianSite,p,userName,apiToken).json()
-        myChildExportViewHtml = myChildExportView['body']['export_view']['value']
-        myChildExportViewName = myPagePropertiesChildrenDict[p]['Name']
-        myChildExportViewLabels = myModules.get_page_labels(atlassianSite,p,userName,apiToken)
-        myChildExportViewTitle = myChildExportView['title'].replace("/","-").replace(":","-").replace(" ","_")
-        print("Getting Child page #" + str(pageCounter) + '/' + str(len(myPagePropertiesChildren)) + ', ' + myChildExportViewTitle + ', ' + myPagePropertiesChildrenDict[str(p)]['ID'])
-        myChildExportPageURL = str(myChildExportView['_links']['base']) + str(myChildExportView['_links']['webui'])
-        myChildExportPageParent = myModules.get_page_parent(atlassianSite,p,userName,apiToken)
-        htmlFileName = myPagePropertiesChildrenDict[p]['Name'].replace(":","-").replace(" ","_") + '.html'
-        myPagePropertiesChildrenDict[str(p)].update({"Filename": htmlFileName})
+        my_child_export_view = myModules.get_body_export_view(atlassian_site,p,user_name,api_token).json()
+        my_child_export_view_html = my_child_export_view['body']['export_view']['value']
+        my_child_export_view_name = my_page_properties_children_dict[p]['Name']
+        my_child_export_view_labels = myModules.get_page_labels(atlassian_site,p,user_name,api_token)
+        my_child_export_view_title = my_child_export_view['title'].replace("/","-").replace(":","-").replace(" ","_")
+        print("Getting Child page #" + str(page_counter) + '/' + str(len(my_page_properties_children)) + ', ' + my_child_export_view_title + ', ' + my_page_properties_children_dict[str(p)]['ID'])
+        my_child_export_page_url = str(my_child_export_view['_links']['base']) + str(my_child_export_view['_links']['webui'])
+        my_child_export_page_parent = myModules.get_page_parent(atlassian_site,p,user_name,api_token)
+        html_file_name = my_page_properties_children_dict[p]['Name'].replace(":","-").replace(" ","_") + '.html'
+        my_page_properties_children_dict[str(p)].update({"Filename": html_file_name})
 
-        myModules.dump_html(atlassianSite,myChildExportViewHtml,myChildExportViewTitle,p,myOutdirBase,myOutdirContent,myChildExportViewLabels,myChildExportPageParent,userName,apiToken,sphinxCompatible,"child")                  # creates html files for every child
-    myModules.dump_html(atlassianSite,myReportExportViewHtml,myReportExportViewTitle,pageId,myOutdirBase,myOutdirContent,myReportExportViewLabels, myReportExportPageParent, userName, apiToken ,sphinxCompatible,"report")         # finally creating the HTML for the report page
+        myModules.dump_html(atlassian_site,my_child_export_view_html,my_child_export_view_title,p,my_outdir_base,my_outdir_content,my_child_export_view_labels,my_child_export_page_parent,user_name,api_token,sphinx_compatible,"child")                  # creates html files for every child
+    myModules.dump_html(atlassian_site,my_report_export_view_html,my_report_export_view_title,page_id,my_outdir_base,my_outdir_content,my_report_export_view_labels, my_report_export_page_parent, user_name, api_token ,sphinx_compatible,"report")         # finally creating the HTML for the report page
     print("Done!")
 else:
     print("No script mode defined in the command line")
