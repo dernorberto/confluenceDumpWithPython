@@ -3,9 +3,7 @@
 Dump Confluence pages using Python (requests) in HTML and RST format, including embedded pictures and attachments.
 References to downloaded files will be updated to their local relative path.
 
-## Refactoring in Progress
-
-The steps in the Description section are still valid.
+## Description
 
 Nonetheless, the refactoring will require only 2 files and accept command-line args:
 * `myModules.py`: Contains all the required functions.
@@ -16,41 +14,27 @@ Nonetheless, the refactoring will require only 2 files and accept command-line a
   * `-s, --space`: The Space Key (if needed).
   * `-p, --page`: The Page ID (if needed).
   * `-l, --label`: The Page label (if needed).
-  * `-x, --sphinx`: The `_images` and `_static` folder are placed at the root of the export folder, instead of together with the exported HTML files.
+  * `-x, --sphinx`: The `_images` and `_static` folders are placed at the root of the export folder, instead of together with the exported HTML files.
 
-## Description
+For CSS Styling, it uses the `confluence.css` from Confluence that can be obtained by using the Workaround described in: https://jira.atlassian.com/browse/CONFSERVER-40907.
+The `site.css` file included with Confluence UI HTML exports is not as complete as the one above.
 
-Purpose of the files:
-1. `confluenceExportHTMLrequestsByLabel.py`: download a set of pages based on one (or more) page Labels.
-2. `confluenceExportHTMLrequestsSingle.py`: download a single page by supplying the page ID as an argument.
-3. `confluenceExportHTMLrequestsPagePropertiesReport.py`: download page properties and all the pages in the report by supplying the page ID as an argument.
-4. `confluenceExportHTMLrequestsPagesInSpace.py`: download all pages from a space.
+### Folder and file structure:
 
-For CSS Styling, it uses the `site.css` from Confluence that can be obtained by using the Workaround described in: https://jira.atlassian.com/browse/CONFSERVER-40907
-The 'site.css' file included with HTML exports is not as complete as the one above.
-
-Folder and file structure:
-
-* `<output folder>/<page|space|label>`
-  * `<output folder>/<page|space|label>/_images/`
-  * `<output folder>/<page|space|label>/_static/`
-  * Copies the file `styles/site.css` into `<output folder>/<page|space|label>/_static/`
-
-Note: `<output folder>` will be in the script path if no argument is defined.
+* The default output folder is `output/` under the same path as the script.
+* A folder with the Space name, Page Properties report page, single page name or Page Label name will be created under the output folder.
+* By default, the `_images/` and `_static/` folders will be placed in the page|space|pageprops|label folder.
+  * The `--sphinx` command line option will put those folder directly under the output folder
+* The file `styles/confluence.css` will be copied into the defined `_static/`
 
 ## What it does
 
-* leverages the Confluence Cloud API
-  * uses CQL with `.../rest/api/search?cql` to search by labels
-  * gets **Export View** from pages (`.../rest/api/content/' + str(pageid) + '?expand=body.export_view`)
-  * download all Attachments from the page `.../rest/api/content/' + str(pageID) + '?expand=children.attachment`.
-  * get page HTML from JSON: `myBodyExportViewHtml = myBodyExportView['body']['export_view']['value']`.
-  * use BS to update HTML **dumpHtml(<Page HTML>,<Page Title>,<Page ID>)**.
-    * prepend a page header containing a `<head>` as well as a link to the original page.
-    * download emoticons (attachments were already downloaded previously).
-    * replace `src` to local attachments/embeds/emoticons
+* Leverages the Confluence Cloud API
+* Puts Confluence meta data like Page ID and Page Labels, in the HTML headers and RST fields.
+* beautifulsoup is used to parse HTML to get and update content, ie. change remote links to local links.
+* Download for every page, all attachments, emoticons and embedded files.
 
-## Getting Started
+## Requirements
 
 * declare system variables:
   * `atlassianAPIToken`
@@ -73,36 +57,30 @@ Note: `<output folder>` will be in the script path if no argument is defined.
 
 ### Executing program
 
-* How to download based on a page label.
-
-```
-confluenceExportHTMLrequestsByLabel.py <site Name> <page Label of all pages to download> [<output folder>]
-```
 
 * How to download a single page based on its ID.
 
 ```
-confluenceExportHTMLrequestsSingle.py <site Name> <ID of page to dump> [<output folder>]
+confluenceDumpWithPython.py -m single -S <site Name> -p <ID of page to dump> [<output folder>] [--sphinx]
 ```
 
 * How to download Page Properties and all the contained pages.
 
 ```
-confluenceExportHTMLrequestsPagePropertiesReport.py <site Name> <ID of page properties report page> [<output folder>]
+confluenceDumpWithPython.py -m pageprops -S <site Name> -p <ID of page properties report page> [<output folder>] [--sphinx]
 ```
 
 * How to download a whole Space.
 
 ```
-confluenceExportHTMLrequestsPagesInSpace.py <site Name> <space KEY> [<output folder>]
+confluenceDumpWithPython.py -m space -S <site Name> -s <space KEY> [<output folder>]
 ```
 
 ## Help
 
 No special advice other than:
 * make sure that your Atlassian API Token is valid.
-* the username for Atlassian API is the e-mail address.
-
+* the username for the Cloud Atlassian API is the e-mail address.
 
 ## Authors
 
@@ -112,16 +90,18 @@ Contributors names and contact info
 
 ## Improvements
 
+- [ ] Add export based on page label.
 - [x] Add links to Downloads for the corresponding pages.
 - [ ] Update all links from downloaded pages to the local copies.
 - [x] Add to headers the parent page and page labels.
 - [ ] Create an index of the pages to use as a TOC.
 - [ ] Create a page layout to display TOC + articles.
 - [x] Copy `styles/site.css` into `output/styles/` if not present.
+- [ ] Allow using with Confluence Server.
 
 ## Issues
 
-* It does not like very long attachment files, you'll need to rename them before the dump.
+* It does not like very long attachment files, you'll need to rename them in Confluence before the dump.
 * Pages previously migrated from Confluence Server might have issues with old emoticons. The best is to convert the pages to the New Editor, which will replace the missing emoticons.
 
 ## Version History
@@ -137,6 +117,14 @@ Contributors names and contact info
   * Added Papge Properties dump and other smaller things
 * 1.0
   * Initial Release
+
+## legacy/ folder with previous version of scripts
+
+Purpose of the files:
+1. `confluenceExportHTMLrequestsByLabel.py`: download a set of pages based on one (or more) page Labels.
+2. `confluenceExportHTMLrequestsSingle.py`: download a single page by supplying the page ID as an argument.
+3. `confluenceExportHTMLrequestsPagePropertiesReport.py`: download page properties and all the pages in the report by supplying the page ID as an argument.
+4. `confluenceExportHTMLrequestsPagesInSpace.py`: download all pages from a space.
 
 ## License
 
