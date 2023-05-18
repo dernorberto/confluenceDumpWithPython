@@ -143,7 +143,7 @@ def get_page_labels(arg_site,arg_page_id,arg_username,arg_api_token):
     response = requests.get(server_url, auth=(arg_username,arg_api_token),timeout=30).json()
     for l in response['results']:
         html_labels.append(l['name'])
-    html_labels = ",".join(html_labels)
+    html_labels = ", ".join(html_labels)
     return(html_labels)
 
 def get_page_properties_children(arg_site,arg_html,arg_outdir,arg_username,arg_api_token):
@@ -165,7 +165,7 @@ def get_page_properties_children(arg_site,arg_html,arg_outdir,arg_username,arg_a
     return[my_page_properties_children,my_page_properties_children_dict]
 
 
-def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir_content,arg_page_labels,arg_page_parent,arg_username,arg_api_token,arg_sphinx_compatible=True,arg_type="common"):
+def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir_content,arg_page_labels,arg_page_parent,arg_username,arg_api_token,arg_sphinx_compatible=True,arg_sphinx_notags=False,arg_type="common"):
     my_vars = set_variables()
     my_emoticons_list = []
     my_outdir_content = arg_outdir_content
@@ -329,7 +329,15 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
         ##
         ## RST Header with Page Metadata
         ##
-        rst_page_header = """.. tags:: """ + str(arg_page_labels) + """
+        if (arg_sphinx_notags == True) or arg_page_labels == "":
+            rst_page_header = """.. meta::
+    :confluencePageId: """ + str(arg_page_id) + """
+    :confluencePageLabels: """ + str(arg_page_labels) + """
+    :confluencePageParent: """ + str(arg_page_parent) + """
+
+"""
+        else:
+            rst_page_header = """.. tags:: """ + str(arg_page_labels) + """
 
 .. meta::
     :confluencePageId: """ + str(arg_page_id) + """
@@ -337,6 +345,7 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
     :confluencePageParent: """ + str(arg_page_parent) + """
 
 """
+
         rst_file = open(rst_file_path, 'w')
         rst_file.write(rst_page_header)            # assing .. tags:: to rst file for future reference
         rst_file.write(output_rst)

@@ -15,6 +15,7 @@ Nonetheless, the refactoring will require only 2 files and accept command-line a
   * `-p, --page`: The Page ID (if needed).
   * `-l, --label`: The Page label (if needed).
   * `-x, --sphinx`: The `_images` and `_static` folders are placed at the root of the export folder, instead of together with the exported HTML files.
+  * `--notags`: Does not add the tags directives to the rst files (when the `sphinx-tags` addon is not used).
 
 For CSS Styling, it uses the `confluence.css` from Confluence that can be obtained by using the Workaround described in: https://jira.atlassian.com/browse/CONFSERVER-40907.
 The `site.css` file included with Confluence UI HTML exports is not as complete as the one above.
