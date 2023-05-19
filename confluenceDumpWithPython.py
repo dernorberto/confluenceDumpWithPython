@@ -90,14 +90,14 @@ elif args.mode == 'space':
             'space_key' : n['key'],
             'space_id' : n['id'],
             'space_name' : n['name'],
-            'homepage_id' : n['homepage_id'],
+            'homepage_id' : n['homepageId'],
             'spaceDescription' : n['description'],
             })
         if (n['key'] == space_key) or n['key'] == str.upper(space_key) or n['key'] == str.lower(space_key):
             print("Found space: " + n['key'])
             space_id = n['id']
             space_name = n['name']
-            current_parent = n['homepage_id']
+            current_parent = n['homepageId']
     my_outdir_content = os.path.join(my_outdir_base,str(space_id) + "-" + str(space_name))
     if not os.path.exists(my_outdir_content):
         os.mkdir(my_outdir_content)
@@ -123,7 +123,7 @@ elif args.mode == 'space':
                 'page_id' : n['id'],
                 'pageTitle' : n['title'],
                 'parentId' : n['parentId'],
-                'space_id' : n['space_id'],
+                'space_id' : n['spaceId'],
                 }
             )
         # put it all together
@@ -136,10 +136,11 @@ elif args.mode == 'space':
             my_body_export_view_name = p['pageTitle']
             my_body_export_view_title = p['pageTitle'].replace("/","-").replace(",","").replace("&","And")
             print()
-            print("Getting page #" + str(page_counter) + '/' + str(len(all_pages_short)) + ', ' + my_body_export_view_title + ', ' + str(p['page_id']))
-            my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
+            print(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}")
+            my_body_export_view_labels = myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token)
+            #my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
             mypage_url = str(my_body_export_view['_links']['base']) + str(my_body_export_view['_links']['webui'])
-            print("dump_html arg sphinx_compatible = " + str(sphinx_compatible))
+            print(f"dump_html arg sphinx_compatible = {sphinx_compatible}")
             myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,p['page_id'],my_outdir_base,my_outdir_content,my_body_export_view_labels,p['parentId'],user_name,api_token,sphinx_compatible,sphinx_notags)
     print("Done!")
 elif args.mode == 'pageprops':
