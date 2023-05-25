@@ -70,7 +70,7 @@ def mk_outdirs(arg_outdir="output"):       # setting default to output
         os.mkdir(outdir_styles)
 
     if not os.path.exists(outdir_styles + '/confluence.css'):
-        os.system(f"cp {script_dir}/styles/confluence.css {outdir_styles}")
+        os.system('cp ' + script_dir + '/styles/confluence.css "' + outdir_styles + '"')
     return(outdir_list)
 
 def get_space_title(arg_site,arg_space_id,arg_username,arg_api_token):
