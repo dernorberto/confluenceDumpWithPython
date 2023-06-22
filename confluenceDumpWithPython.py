@@ -154,7 +154,7 @@ elif args.mode == 'space':
             my_body_export_view = myModules.get_body_export_view(atlassian_site,p['page_id'],user_name,api_token).json()
             my_body_export_view_html = my_body_export_view['body']['export_view']['value']
             my_body_export_view_name = p['pageTitle']
-            my_body_export_view_title = p['pageTitle'].replace("/","-").replace(",","").replace("&","And")
+            my_body_export_view_title = p['pageTitle'].replace("/","-").replace(",","").replace("&","And").replace(" ","_")     # added .replace(" ","_") so that filenames have _ as a separator
             print()
             print(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}")
             my_body_export_view_labels = myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token)
