@@ -2,17 +2,19 @@ import os
 import re
 import sys
 
-try:
-    target_folder = sys.argv[1]
-except IndexError:
-    target_folder = os.curdir
 
-    raise SystemExit(f"ERROR, Target folder is not correct")
+if len(sys.argv) > 1:
+    try:
+        target_folder = sys.argv[1]
+    except IndexError:        
+        raise SystemExit(f"ERROR, Target folder is not correct")
+else:
+    target_folder = os.path.join(os.getcwd(),"output/679313542-Move to UK")
 
-directory = os.curdir
 file_type = '.rst'
-
+# dict with .rst files pageids and filenames
 rst_pageids = {}
+# filename for export file
 rst_pageids_filename = "z_rst_pageids.txt"
 
 #
@@ -50,12 +52,13 @@ conf_pageids_filename = "z_conf_pageids.txt"
 for filename in os.listdir(target_folder):
     if filename.endswith(file_type):
         path_and_name = os.path.join(target_folder, filename)
+#####################
         with open(path_and_name) as file:
             contents = file.read()
             while line := file.readline():
                 if "<https://optile.atlassian.net/wiki/spaces/" in line and "/pages/" in line and not line.startswith("Original URL:"):
                     for find_match in re.findall(r'<(.*?)>',line):
-#                    for find_match in re.findall("<https://optile.atlassian.net(.+?)>",line):      # commenting to try the one above
+        #                    for find_match in re.findall("<https://optile.atlassian.net(.+?)>",line):      # commenting to try the one above
                         try:
                             # getting the pageID out of the confluence URL
                             link_pageid = find_match.split("/pages/")[1].split("/")[0].split("#")[0]
@@ -76,8 +79,6 @@ for filename in os.listdir(target_folder):
         with open(conf_pageids_filename, 'w') as file:
             for n in conf_pageids:
                 file.write(str(n) + '\n')
-    else:
-        continue
 
 print(f"Created the file \"{conf_pageids_filename}\" with {len(conf_pageids)} entries")
 # These are the Confluence links that I need to convert
