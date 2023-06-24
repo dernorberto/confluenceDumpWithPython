@@ -6,10 +6,10 @@ import sys
 if len(sys.argv) > 1:
     try:
         target_folder = sys.argv[1]
-    except IndexError:        
-        raise SystemExit(f"ERROR, Target folder is not correct")
+    except IndexError:
+        raise SystemExit("ERROR, Target folder is not correct")
 else:
-    target_folder = os.path.join(os.getcwd(),"output/679313542-Move to UK")
+    target_folder = os.path.join(os.getcwd(),"output/TestMe")
 
 file_type = '.rst'
 # dict with .rst files pageids and filenames
@@ -21,25 +21,27 @@ rst_pageids_filename = "z_rst_pageids.txt"
 # ROUND 1
 # get from all local RST files: page ID and filename
 #
+my_rst_files = []
 for filename in os.listdir(target_folder):
     if filename.endswith(file_type):
-        path_and_name = os.path.join(target_folder, filename)
-        with open(path_and_name) as file:
-            while line := file.readline():
-                if ":confluencePageId:" in line:
-                    my_rsts_pageid = line.split(":confluencePageId: ")[1][:-1]
-                    rst_pageids.update({str(my_rsts_pageid)[:-1] : str(filename)})
-                    print(f"{str(my_rsts_pageid)[:-1]} : {str(filename)}")
-                    break
-                else:
-                    print(f"Breaking on {filename}")
+        my_rst_files.append(filename)
 
-        # write the file out
-        with open(rst_pageids_filename, 'w') as file:
-            for k,v in rst_pageids.items():
-                file.write(f"{k}:{v}\n")
-    else:
-        continue
+for filename in my_rst_files:
+    path_and_name = os.path.join(target_folder, filename)
+    with open(path_and_name) as file:
+        while line := file.readline():
+            if ":confluencePageId:" in line:
+                my_rsts_pageid = line.split(":confluencePageId: ")[1][:-1]
+                rst_pageids.update({str(my_rsts_pageid)[:-1] : str(filename)})
+                print(f"{str(my_rsts_pageid)[:-1]} : {str(filename)}")
+                break
+            else:
+                print(f"Breaking on {filename}")
+
+    # write the file out
+    with open(rst_pageids_filename, 'w') as file:
+        for k,v in rst_pageids.items():
+            file.write(f"{k}:{v}\n")
 
 #
 # ROUND 2
@@ -49,36 +51,36 @@ for filename in os.listdir(target_folder):
 conf_pageids = []
 conf_pageids_filename = "z_conf_pageids.txt"
 
-for filename in os.listdir(target_folder):
-    if filename.endswith(file_type):
-        path_and_name = os.path.join(target_folder, filename)
-#####################
-        with open(path_and_name) as file:
-            contents = file.read()
-            while line := file.readline():
-                if "<https://optile.atlassian.net/wiki/spaces/" in line and "/pages/" in line and not line.startswith("Original URL:"):
-                    for find_match in re.findall(r'<(.*?)>',line):
-        #                    for find_match in re.findall("<https://optile.atlassian.net(.+?)>",line):      # commenting to try the one above
-                        try:
-                            # getting the pageID out of the confluence URL
-                            link_pageid = find_match.split("/pages/")[1].split("/")[0].split("#")[0]
-                            # using that pageID to match with the one in the "rst_pageids" dict
-                            link_rst_file = rst_pageids[link_pageid]
-                            # This is where I am stuck
-                            # TODO
-                            # I need to replace the text between < > with the local target file
-                            re.sub(r'<(.*?)>',link_rst_file,find_match)
-                            print(line)
-                            print(find_match)
-                        except:
-                            print(f"The match {find_match} in file {filename} does not work")
-                        if link_pageid not in conf_pageids:
-                            conf_pageids.append(link_pageid)
-
-        # write the file out
-        with open(conf_pageids_filename, 'w') as file:
-            for n in conf_pageids:
-                file.write(str(n) + '\n')
+for filename in my_rst_files:
+    # input file
+    path_and_name = os.path.join(target_folder, filename)
+    # output file
+    out_filename = f"zout_{filename}"
+    out_path_and_name = os.path.join(target_folder, out_filename)
+    # open input file
+    with open(path_and_name, 'r') as file:
+        all_file_lines = file.readlines()
+    for i in enumerate(all_file_lines):
+        if "<https://optile.atlassian.net/wiki/spaces/" in line and "/pages/" in line and not line.startswith("Original URL:"):
+            for find_match in re.findall(r'<(.*?)>',line):      # if there are >1 links in a line
+                if "<https://optile.atlassian.net/wiki/spaces/" in find_match:
+                    # getting the pageID out of the confluence URL
+                    link_pageid = find_match.split("/pages/")[1].split("/")[0].split("#")[0]
+                    if link_pageid in rst_pageids:
+                        # using that pageID to match with the one in the "rst_pageids" dict
+                        link_html_file = str("<" + rst_pageids[link_pageid] + ">").replace(".rst",".html")
+                        # This is where I am stuck
+                        # I need to replace the text between < > with the local target file
+                        i = re.sub(r'<(.*?)>',link_html_file,line)
+                        print(f"{find_match} will be replaced by {i}")
+                    if link_pageid not in conf_pageids:
+                        conf_pageids.append(link_pageid)
+    with open(path_and_name, 'w') as file:
+        file.writelines(all_file_lines)
+    # write the file out
+    with open(conf_pageids_filename, 'w') as file:
+        for n in conf_pageids:
+            file.write(str(n) + '\n')
 
 print(f"Created the file \"{conf_pageids_filename}\" with {len(conf_pageids)} entries")
 # These are the Confluence links that I need to convert
