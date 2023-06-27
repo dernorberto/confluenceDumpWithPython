@@ -58,25 +58,29 @@ for filename in my_rst_files:
     out_filename = f"zout_{filename}"
     out_path_and_name = os.path.join(target_folder, out_filename)
     # open input file
-    with open(path_and_name, 'r') as file:
-        all_file_lines = file.readlines()
-    for i in enumerate(all_file_lines):
-        if "<https://optile.atlassian.net/wiki/spaces/" in line and "/pages/" in line and not line.startswith("Original URL:"):
-            for find_match in re.findall(r'<(.*?)>',line):      # if there are >1 links in a line
-                if "<https://optile.atlassian.net/wiki/spaces/" in find_match:
-                    # getting the pageID out of the confluence URL
-                    link_pageid = find_match.split("/pages/")[1].split("/")[0].split("#")[0]
-                    if link_pageid in rst_pageids:
-                        # using that pageID to match with the one in the "rst_pageids" dict
-                        link_html_file = str("<" + rst_pageids[link_pageid] + ">").replace(".rst",".html")
-                        # This is where I am stuck
-                        # I need to replace the text between < > with the local target file
-                        i = re.sub(r'<(.*?)>',link_html_file,line)
-                        print(f"{find_match} will be replaced by {i}")
-                    if link_pageid not in conf_pageids:
-                        conf_pageids.append(link_pageid)
-    with open(path_and_name, 'w') as file:
-        file.writelines(all_file_lines)
+    with open(path_and_name, 'r') as sfile:
+        all_sfile_lines = sfile.readlines()
+        with open(out_path_and_name, 'w') as tfile:
+            for n,line in enumerate(all_sfile_lines):
+                if "<https://optile.atlassian.net/wiki/spaces/" in line and "/pages/" in line and not line.startswith("Original URL:"):
+                    for find_match in re.findall(r'<(https:\/\/\w+.*spaces\/\w+\/pages\/(\d+)\/.*)>',line): # if there are >1 links in a line
+                    #for find_match in re.findall(r'<(.*?)>',line):      # if there are >1 links in a line
+                        # getting the pageID out of the confluence URL
+                        link_pageid = find_match[1]
+                        #link_pageid = find_match.split("/pages/")[1].split("/")[0].split("#")[0]
+                        if link_pageid in rst_pageids:
+                            # using that pageID to match with the one in the "rst_pageids" dict
+                            link_html_file = str(rst_pageids[link_pageid]).replace(".rst",".html")
+                            # This is where I am stuck
+                            # I need to replace the text between < > with the local target file
+                            line = line.replace((r'<(https:\/\/\w+.*spaces\/\w+\/pages\/(\d+)\/.*)>'),link_html_file)
+                            ##i = re.sub(r'<(.*?)>',link_html_file,line)
+                            print("Replaced " + str(find_match[0]) + " with " + str(link_html_file))
+                            #print(f"{find_match} will be replaced by {i}")
+                        if link_pageid not in conf_pageids:
+                            conf_pageids.append(link_pageid)
+#    with open(path_and_name, 'w') as file:
+#        file.writelines(all_file_lines)
     # write the file out
     with open(conf_pageids_filename, 'w') as file:
         for n in conf_pageids:
