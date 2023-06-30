@@ -16,6 +16,9 @@ Nonetheless, the refactoring will require only 2 files and accept command-line a
   * `-l, --label`: The Page label (if needed).
   * `-x, --sphinx`: The `_images` and `_static` folders are placed at the root of the export folder, instead of together with the exported HTML files.
   * `--notags`: Does not add the tags directives to the rst files (when the `sphinx-tags` addon is not used).
+* `updatePageLinks.py`: Update online confluence links to the local files that have been downloaded so far.
+  * `--folder`: Folder containing the files to update.
+  * `--test`: Instead of overwriting the original .rst files, it will create updated ones with `zout_` as a prefix.
 
 For CSS Styling, it uses the `confluence.css` from Confluence that can be obtained by using the Workaround described in: https://jira.atlassian.com/browse/CONFSERVER-40907.
 The `site.css` file included with Confluence UI HTML exports is not as complete as the one above.
@@ -93,7 +96,7 @@ Contributors names and contact info
 
 - [ ] Add export based on page label.
 - [x] Add links to Downloads for the corresponding pages.
-- [ ] Update all links from downloaded pages to the local copies.
+- [x] Update all links from downloaded pages to the local copies.
 - [x] Add to headers the parent page and page labels.
 - [ ] Create an index of the pages to use as a TOC.
 - [ ] Create a page layout to display TOC + articles.
