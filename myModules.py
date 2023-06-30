@@ -204,6 +204,23 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
     my_vars = set_variables()     # create a dict with the 3 folder paths: attach, emoticons, styles
 
     soup = bs(arg_html, "html.parser")
+
+    #
+    # removing elements we don't need like
+    # * <div class="expand-control"...
+    # * <pre class="syntaxhighlighter-pre"...
+    #
+    my_undesirables = soup.findAll('div',class_="expand-control")
+    for div in my_undesirables:
+        div.decompose()
+
+    # Find all pre tags
+    pre_tags = soup.find_all('pre')
+    # Remove the class 'syntaxhighlighter-pre' from each pre tag
+    for pre in pre_tags:
+        pre['class'] = [c for c in pre.get('class', []) if c != 'syntaxhighlighter-pre']
+
+    # continuing
     html_file_name = f"{arg_title}.html"
     html_file_path = os.path.join(my_outdir_content,html_file_name)
     my_attachments = get_attachments(arg_site,arg_page_id,str(my_outdirs[0]),arg_username,arg_api_token)
@@ -277,14 +294,12 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
             embed['height'] = "auto"
             embed['onclick'] = f"window.open(\"{my_embed_path_relative}\")"
             embed['src'] = my_embed_path_relative
-
     #
-    # dealing with "emoticon"
+    # dealing with "emoticon" and expands' "grey_arrow_down.png"
     #
-    my_emoticons = soup.findAll('img',class_=re.compile("emoticon"))     # atlassian-check_mark, or
+    my_emoticons = soup.findAll('img',class_=re.compile("emoticon|expand-control-image"))
     print(f"{len(my_emoticons)} emoticons.")
     for emoticon in my_emoticons:
-        request_emoticons = requests.get(emoticon['src'], auth=(arg_username, arg_api_token))
         my_emoticon_title = emoticon['src'].rsplit('/',1)[-1]     # just filename
         if arg_sphinx_compatible == True:
             my_emoticon_path = f"../{my_vars['emoticons_dir']}{my_emoticon_title}"
@@ -294,6 +309,7 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
             my_emoticons_list.append(my_emoticon_title)
             print(f"Getting emoticon: {my_emoticon_title}")
             file_path = os.path.join(my_outdirs[1],my_emoticon_title)
+            request_emoticons = requests.get(emoticon['src'], auth=(arg_username, arg_api_token))
             open(file_path, 'wb').write(request_emoticons.content)
         emoticon['src'] = my_emoticon_path
 
@@ -335,6 +351,7 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
         for attachment in my_attachments:
             my_pre_footer += (f"<li><a href=\"{os.path.join(attach_dir,attachment)}\">{attachment}</a></li>")
         my_pre_footer += "</ol></br>"
+
     #
     # Putting HTML together
     #

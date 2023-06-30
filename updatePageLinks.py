@@ -75,7 +75,7 @@ for filename in my_rst_files:
     with open(out_path_and_name, 'w') as tfile:     # tfile = target file
         for n,line in enumerate(all_sfile_lines):
             if ("<https://optile.atlassian.net/wiki/spaces/" in line or "</wiki/spaces/" in line) and "/pages/" in line and not line.startswith("Original URL:"):
-                for find_match in re.findall(r'<(https:\/\/\w+.*spaces\/\w+\/pages\/(\d+)?.*)>|<(\/wiki\/spaces\/\w+\/pages\/(\d+)\/?.*)>',line):      # if there are >1 links in a line
+                for find_match in re.findall(r'<?(https:\/\/\w+.*spaces\/\w+\/pages\/(\d+)?.*)>?|<(\/wiki\/spaces\/\w+\/pages\/(\d+)\/?.*)>',line):      # if there are >1 links in a line
                     # getting the pageID out of the confluence URL
                     if find_match[1]:       # for 0 and 1 of findall
                         link_pageid = find_match[1]
