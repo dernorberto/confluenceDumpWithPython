@@ -171,6 +171,10 @@ def get_page_properties_children(arg_site,arg_html,arg_outdir,arg_username,arg_a
     print( f"{my_page_properties_items_counter} Page Properties Children Pages")
     return[my_page_properties_children,my_page_properties_children_dict]
 
+def get_editor_version(arg_site,arg_page_id,arg_username,arg_api_token):
+    server_url = f"https://{arg_site}.atlassian.net/wiki/rest/api/content/{arg_page_id}?expand=metadata.properties.editor"
+    response = requests.get(server_url, auth=(arg_username, arg_api_token))
+    return(response)
 
 def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir_content,arg_page_labels,arg_page_parent,arg_username,arg_api_token,arg_sphinx_compatible=True,arg_sphinx_notags=False,arg_type="common"):
     """Create HTML and RST files

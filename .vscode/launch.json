@@ -5,12 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: getPageVersions.py",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true
-        }
+            "program": "${workspaceFolder}\\getPageVersions.py",
+            "args": "--space SECOPS",
+//            "console": "integratedTerminal",
+            "justMyCode": true,
+            "preLaunchTask": "pwd"
+//            "preLaunchTask": "source .venv/bin/activate"
+        },
     ]
 }
