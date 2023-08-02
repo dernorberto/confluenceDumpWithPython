@@ -218,7 +218,7 @@ elif args.mode == 'pageprops':
         #html_file_name = my_page_properties_children_dict[p]['Name'].replace(":","-").replace(" ","_") + '.html'
         my_page_properties_children_dict[str(p)].update({"Filename": html_file_name})
 
-        myModules.dump_html(atlassian_site,my_child_export_view_html,my_child_export_view_title,p,my_outdir_base,my_outdir_content,my_child_export_view_labels,my_child_export_page_parent,user_name,api_token,sphinx_compatible,sphinx_tags,"child")                  # creates html files for every child
+        myModules.dump_html(atlassian_site,my_child_export_view_html,my_child_export_view_title,p,my_outdir_base,my_outdir_content,my_child_export_view_labels,my_child_export_page_parent,user_name,api_token,sphinx_compatible,sphinx_tags,"reportchild")                  # creates html files for every child
     myModules.dump_html(atlassian_site,my_report_export_view_html,my_report_export_view_title,page_id,my_outdir_base,my_outdir_content,my_report_export_view_labels, my_report_export_page_parent, user_name, api_token ,sphinx_compatible,sphinx_tags,"report")         # finally creating the HTML for the report page
     print("Done!")
 else:

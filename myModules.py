@@ -176,7 +176,7 @@ def get_editor_version(arg_site,arg_page_id,arg_username,arg_api_token):
     response = requests.get(server_url, auth=(arg_username, arg_api_token))
     return(response)
 
-def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir_content,arg_page_labels,arg_page_parent,arg_username,arg_api_token,arg_sphinx_compatible=True,arg_sphinx_tags=False,arg_type="common"):
+def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir_content,arg_page_labels,arg_page_parent,arg_username,arg_api_token,arg_sphinx_compatible=True,arg_sphinx_tags=False,arg_type=""):
     """Create HTML and RST files
 
     Args:
@@ -382,7 +382,7 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
         ## RST Header with Page Metadata
         ##
         if (arg_sphinx_compatible == True):
-            rst_page_header = (f":conf_pagetype: \n"
+            rst_page_header = (f":conf_pagetype: {arg_type}\n"
                 f":conf_pageid: {arg_page_id}\n"
                 f":conf_parent: {arg_page_parent}\n"
                 f":conf_labels: {arg_page_labels}\n"
@@ -395,8 +395,14 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
                 f"    :confluencePageParent: {arg_page_parent} \n"
                 f"\n"
             )
+        ## Footer with list of page labels
+        footer_rst = (f"...."
+            f"\n"
+            f"\n**Page labels**: {arg_page_labels} \n")
+
         rst_file = open(rst_file_path, 'w')
         rst_file.write(rst_page_header)
         rst_file.write(output_rst)
+        rst_file.write(footer_rst)
         rst_file.close()
         print(f"Exported RST file: {rst_file_path}")
