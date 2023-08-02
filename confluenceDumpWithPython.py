@@ -34,10 +34,10 @@ parser.add_argument('--label', '-l', type=str,
                     help='Page label')
 parser.add_argument('--outdir', '-o', type=str, default='output',
                     help='Folder for export', required=False)
-parser.add_argument('--sphinx', '-x', action='store_true', default=False,
+parser.add_argument('--sphinx', '-x', action='store_true', default=True,
                     help='Sphinx compatible folder structure', required=False)
-parser.add_argument('--notags', action='store_true', default=False,
-                    help='Do not add tags to export', required=False)
+parser.add_argument('--tags', action='store_true', default=False,
+                    help='Add labels as .. tags::', required=False)
 args = parser.parse_args()
 atlassian_site = args.site
 if args.mode == 'single':
@@ -61,7 +61,7 @@ user_name = os.environ["atlassianUserEmail"]
 api_token = os.environ["atlassianAPIToken"]
 
 sphinx_compatible = args.sphinx
-sphinx_notags = args.notags
+sphinx_tags = args.tags
 print("Sphinx set to " + str(sphinx_compatible))
 atlassian_site = args.site
 my_outdir_base = args.outdir
@@ -95,7 +95,7 @@ if args.mode == 'single':
     my_outdirs = myModules.mk_outdirs(my_outdir_base)               # attachments, embeds, scripts
     my_page_labels = myModules.get_page_labels(atlassian_site,page_id,user_name,api_token)
     print(f"Base export folder is \"{my_outdir_base}\" and the Content goes to \"{my_outdir_content}\"")
-    myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,page_id,my_outdir_base, my_outdir_content,my_page_labels,page_parent,user_name,api_token,sphinx_compatible,sphinx_notags)
+    myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,page_id,my_outdir_base, my_outdir_content,my_page_labels,page_parent,user_name,api_token,sphinx_compatible,sphinx_tags)
     print("Done!")
 elif args.mode == 'space':
     ###########
@@ -161,7 +161,7 @@ elif args.mode == 'space':
             #my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
             mypage_url = f"{my_body_export_view['_links']['base']}{my_body_export_view['_links']['webui']}"
             print(f"dump_html arg sphinx_compatible = {sphinx_compatible}")
-            myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,p['page_id'],my_outdir_base,my_outdir_content,my_body_export_view_labels,p['parentId'],user_name,api_token,sphinx_compatible,sphinx_notags)
+            myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,p['page_id'],my_outdir_base,my_outdir_content,my_body_export_view_labels,p['parentId'],user_name,api_token,sphinx_compatible,sphinx_tags)
     print("Done!")
 elif args.mode == 'pageprops':
     ###############
@@ -218,8 +218,8 @@ elif args.mode == 'pageprops':
         #html_file_name = my_page_properties_children_dict[p]['Name'].replace(":","-").replace(" ","_") + '.html'
         my_page_properties_children_dict[str(p)].update({"Filename": html_file_name})
 
-        myModules.dump_html(atlassian_site,my_child_export_view_html,my_child_export_view_title,p,my_outdir_base,my_outdir_content,my_child_export_view_labels,my_child_export_page_parent,user_name,api_token,sphinx_compatible,sphinx_notags,"child")                  # creates html files for every child
-    myModules.dump_html(atlassian_site,my_report_export_view_html,my_report_export_view_title,page_id,my_outdir_base,my_outdir_content,my_report_export_view_labels, my_report_export_page_parent, user_name, api_token ,sphinx_compatible,sphinx_notags,"report")         # finally creating the HTML for the report page
+        myModules.dump_html(atlassian_site,my_child_export_view_html,my_child_export_view_title,p,my_outdir_base,my_outdir_content,my_child_export_view_labels,my_child_export_page_parent,user_name,api_token,sphinx_compatible,sphinx_tags,"child")                  # creates html files for every child
+    myModules.dump_html(atlassian_site,my_report_export_view_html,my_report_export_view_title,page_id,my_outdir_base,my_outdir_content,my_report_export_view_labels, my_report_export_page_parent, user_name, api_token ,sphinx_compatible,sphinx_tags,"report")         # finally creating the HTML for the report page
     print("Done!")
 else:
     print("No script mode defined in the command line")

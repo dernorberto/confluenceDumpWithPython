@@ -176,7 +176,7 @@ def get_editor_version(arg_site,arg_page_id,arg_username,arg_api_token):
     response = requests.get(server_url, auth=(arg_username, arg_api_token))
     return(response)
 
-def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir_content,arg_page_labels,arg_page_parent,arg_username,arg_api_token,arg_sphinx_compatible=True,arg_sphinx_notags=False,arg_type="common"):
+def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir_content,arg_page_labels,arg_page_parent,arg_username,arg_api_token,arg_sphinx_compatible=True,arg_sphinx_tags=False,arg_type="common"):
     """Create HTML and RST files
 
     Args:
@@ -191,7 +191,7 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
         arg_username: Username for authentication
         arg_api_token: API Token for authentication
         arg_sphinx_compatible: Place _static and _images folder at root of output folder
-        arg_sphinx_notags: Do not add tags to output RST
+        arg_sphinx_tags: Add tags to output RST
         arg_type: For Page Properties, the type of page: "report", "child" or "common" if it's not for Page Properties
 
     Returns:
@@ -381,24 +381,22 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
         ##
         ## RST Header with Page Metadata
         ##
-        if (arg_sphinx_notags == True) or arg_page_labels == "":
+        if (arg_sphinx_compatible == True):
+            rst_page_header = (f":conf_pagetype: \n"
+                f":conf_pageid: {arg_page_id}\n"
+                f":conf_parent: {arg_page_parent}\n"
+                f":conf_labels: {arg_page_labels}\n"
+                f"\n"
+            )
+        else:
             rst_page_header = (f".. meta::\n"
                 f"    :confluencePageId: {arg_page_id} \n"
                 f"    :confluencePageLabels: {arg_page_labels} \n"
                 f"    :confluencePageParent: {arg_page_parent} \n"
                 f"\n"
             )
-        else:
-            rst_page_header = (f".. tags:: {arg_page_labels}\n"
-                f".. meta::\n"
-                f"    :confluencePageId: {arg_page_id} \n"
-                f"    :confluencePageLabels: {arg_page_labels} \n"
-                f"    :confluencePageParent: {arg_page_parent} \n"
-                f"\n"
-            )
-
         rst_file = open(rst_file_path, 'w')
-        rst_file.write(rst_page_header)            # add .. tags:: to rst file for future reference
+        rst_file.write(rst_page_header)
         rst_file.write(output_rst)
         rst_file.close()
         print(f"Exported RST file: {rst_file_path}")
