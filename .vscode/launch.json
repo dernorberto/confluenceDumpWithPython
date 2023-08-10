@@ -15,5 +15,15 @@
             "preLaunchTask": "pwd"
 //            "preLaunchTask": "source .venv/bin/activate"
         },
+        {
+            "name": "ConfluenceDumpHtml",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/confluenceDumpWithPython.py",
+            "args": "--site optile --mode pageprops --page 78872647",
+//            "console": "integratedTerminal",
+            "justMyCode": true,
+//            "preLaunchTask": "source .venv/bin/activate"
+        }
     ]
 }

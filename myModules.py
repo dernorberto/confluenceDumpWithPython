@@ -151,7 +151,7 @@ def get_page_labels(arg_site,arg_page_id,arg_username,arg_api_token):
         html_labels.append(l['name'])
         print(f"Label: {l['name']}")
     html_labels = ", ".join(html_labels)
-    print(f"html_labels: {html_labels}")
+    print(f"Page labels: {html_labels}")
     return(html_labels)
 
 def get_page_properties_children(arg_site,arg_html,arg_outdir,arg_username,arg_api_token):
@@ -176,7 +176,23 @@ def get_editor_version(arg_site,arg_page_id,arg_username,arg_api_token):
     response = requests.get(server_url, auth=(arg_username, arg_api_token))
     return(response)
 
-def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir_content,arg_page_labels,arg_page_parent,arg_username,arg_api_token,arg_sphinx_compatible=True,arg_sphinx_tags=False,arg_type=""):
+def dump_html(
+    arg_site,
+    arg_html,
+    arg_title,
+    arg_page_id,
+    arg_outdir_base,
+    arg_outdir_content,
+    arg_page_labels,
+    arg_page_parent,
+    arg_username,
+    arg_api_token,
+    arg_sphinx_compatible=True,
+    arg_sphinx_tags=False,
+    arg_type="",
+    arg_html_output=False,
+    arg_show_labels=False
+    ):
     """Create HTML and RST files
 
     Args:
@@ -225,7 +241,7 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
         pre['class'] = [c for c in pre.get('class', []) if c != 'syntaxhighlighter-pre']
 
     # continuing
-    html_file_name = f"{arg_title}.html"
+    html_file_name = (f"{arg_title}.html").replace("/","-").replace(":","-").replace(" ","_")
     html_file_path = os.path.join(my_outdir_content,html_file_name)
     my_attachments = get_attachments(arg_site,arg_page_id,str(my_outdirs[0]),arg_username,arg_api_token)
     #
@@ -367,11 +383,12 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
         html_file.write(my_pre_footer)
     html_file.write(myFooter)
     html_file.close()
-    print(f"Exported HTML file {html_file_path}")
+    if arg_html_output == True:
+        print(f"Exported HTML file {html_file_path}")
     #
     # convert html to rst
     #
-    rst_file_name = f"{arg_title}.rst"
+    rst_file_name = f"{html_file_name.replace('html','rst')}"
     rst_file_path = os.path.join(my_outdir_content,rst_file_name)
     try:
         output_rst = pypandoc.convert_file(str(html_file_path), 'rst', format='html',extra_args=['--standalone','--wrap=none','--list-tables'])
@@ -386,6 +403,7 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
                 f":conf_pageid: {arg_page_id}\n"
                 f":conf_parent: {arg_page_parent}\n"
                 f":conf_labels: {arg_page_labels}\n"
+                f":doc_title: {arg_title}\n"
                 f"\n"
             )
         else:
@@ -396,9 +414,12 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
                 f"\n"
             )
         ## Footer with list of page labels
-        footer_rst = (f"...."
-            f"\n"
-            f"\n**Page labels**: {arg_page_labels} \n")
+        if arg_show_labels == True:
+            footer_rst = (f"...."
+                f"\n"
+                f"\n**Page labels**: {arg_page_labels} \n")
+        else:
+            footer_rst = ""
 
         rst_file = open(rst_file_path, 'w')
         rst_file.write(rst_page_header)
@@ -406,3 +427,5 @@ def dump_html(arg_site,arg_html,arg_title,arg_page_id,arg_outdir_base,arg_outdir
         rst_file.write(footer_rst)
         rst_file.close()
         print(f"Exported RST file: {rst_file_path}")
+        if arg_html_output == False:
+            os.remove(html_file_path)

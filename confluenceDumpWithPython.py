@@ -38,6 +38,11 @@ parser.add_argument('--sphinx', '-x', action='store_true', default=True,
                     help='Sphinx compatible folder structure', required=False)
 parser.add_argument('--tags', action='store_true', default=False,
                     help='Add labels as .. tags::', required=False)
+parser.add_argument('--html', action='store_true', default=False,
+                    help='Include .html file in export (default is only .rst)', required=False)
+parser.add_argument('--showlabels', action='store_true', default=False,
+                    help='Export .rst files with the page labels at the bottom', required=False)
+
 args = parser.parse_args()
 atlassian_site = args.site
 if args.mode == 'single':
@@ -208,7 +213,7 @@ elif args.mode == 'pageprops':
         my_child_export_view_html = my_child_export_view['body']['export_view']['value']
         my_child_export_view_name = my_page_properties_children_dict[p]['Name']
         my_child_export_view_labels = myModules.get_page_labels(atlassian_site,p,user_name,api_token)
-        my_child_export_view_title = my_child_export_view['title'].replace("/","-").replace(":","-").replace(" ","_")
+        my_child_export_view_title = my_child_export_view['title']      ##.replace("/","-").replace(":","-").replace(" ","_")
         print(f"Getting Child page #{page_counter}/{len(my_page_properties_children)}, {my_child_export_view_title}, {my_page_properties_children_dict[str(p)]['ID']}")
         #print("Getting Child page #" + str(page_counter) + '/' + str(len(my_page_properties_children)) + ', ' + my_child_export_view_title + ', ' + my_page_properties_children_dict[str(p)]['ID'])
         my_child_export_page_url = f"{my_child_export_view['_links']['base']}{my_child_export_view['_links']['webui']}"
@@ -218,8 +223,40 @@ elif args.mode == 'pageprops':
         #html_file_name = my_page_properties_children_dict[p]['Name'].replace(":","-").replace(" ","_") + '.html'
         my_page_properties_children_dict[str(p)].update({"Filename": html_file_name})
 
-        myModules.dump_html(atlassian_site,my_child_export_view_html,my_child_export_view_title,p,my_outdir_base,my_outdir_content,my_child_export_view_labels,my_child_export_page_parent,user_name,api_token,sphinx_compatible,sphinx_tags,"reportchild")                  # creates html files for every child
-    myModules.dump_html(atlassian_site,my_report_export_view_html,my_report_export_view_title,page_id,my_outdir_base,my_outdir_content,my_report_export_view_labels, my_report_export_page_parent, user_name, api_token ,sphinx_compatible,sphinx_tags,"report")         # finally creating the HTML for the report page
+        myModules.dump_html(
+                arg_site=atlassian_site,
+                arg_html=my_child_export_view_html,
+                arg_title=my_child_export_view_title,
+                arg_page_id=p,
+                arg_outdir_base=my_outdir_base,
+                arg_outdir_content=my_outdir_content,
+                arg_page_labels=my_child_export_view_labels,
+                arg_page_parent=my_child_export_page_parent,
+                arg_username=user_name,
+                arg_api_token=api_token,
+                arg_sphinx_compatible=sphinx_compatible,
+                arg_sphinx_tags=sphinx_tags,
+                arg_type="reportchild",
+                arg_html_output=args.html,
+                arg_show_labels=args.showlabels
+            )                  # creates html files for every child
+    myModules.dump_html(
+            arg_site=atlassian_site,
+            arg_html=my_report_export_view_html,
+            arg_title=my_report_export_view_title,
+            arg_page_id=page_id,
+            arg_outdir_base=my_outdir_base,
+            arg_outdir_content=my_outdir_content,
+            arg_page_labels=my_report_export_view_labels,
+            arg_page_parent=my_report_export_page_parent,
+            arg_username=user_name,
+            arg_api_token=api_token,
+            arg_sphinx_compatible=sphinx_compatible,
+            arg_sphinx_tags=sphinx_tags,
+            arg_type="report",
+            arg_html_output=args.html,
+            arg_show_labels=args.showlabels
+        )         # finally creating the HTML for the report page
     print("Done!")
 else:
     print("No script mode defined in the command line")
