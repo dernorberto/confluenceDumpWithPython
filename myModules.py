@@ -199,6 +199,7 @@ def dump_html(
     arg_sphinx_tags=False,
     arg_type="",
     arg_html_output=False,
+    arg_rst_output=True,
     arg_show_labels=False
     ):
     """Create HTML and RST files
@@ -406,6 +407,9 @@ def dump_html(
     #
     # convert html to rst
     #
+    if not arg_rst_output:
+        return
+    
     rst_file_name = f"{html_file_name.replace('html','rst')}"
     rst_file_path = os.path.join(my_outdir_content,rst_file_name)
     try:
