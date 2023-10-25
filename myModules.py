@@ -128,13 +128,16 @@ def get_page_parent(arg_site,arg_page_id,arg_username,arg_api_token):
     response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
     return(response.json()['parentId'])
 
+def remove_illegal_characters(input):
+    return re.sub(r'[^\w_\.\- ]+', '_', input)
+
 def get_attachments(arg_site,arg_page_id,arg_outdir_attach,arg_username,arg_api_token):
     my_attachments_list = []
     server_url = f"https://{arg_site}.atlassian.net/wiki/rest/api/content/{arg_page_id}?expand=children.attachment"
     response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
     my_attachments = response.json()['children']['attachment']['results']
     for attachment in my_attachments:
-        attachment_title = requests.utils.unquote(attachment['title']).replace(" ","_").replace(":","-")         # I want attachments without spaces
+        attachment_title = remove_illegal_characters(requests.utils.unquote(attachment['title']).replace(" ","_").replace(":","-"))         # I want attachments without spaces
         print(f"Downloading: {attachment_title}")
         attachment_url = f"https://{arg_site}.atlassian.net/wiki{attachment['_links']['download']}"
         request_attachment = requests.get(attachment_url, auth=(arg_username, arg_api_token),allow_redirects=True,timeout=30)
@@ -265,7 +268,7 @@ def dump_html(
     for embed_ext in my_embeds_externals:
         orig_embed_external_path = embed_ext['src']     # online link to file
         orig_embed_external_name = orig_embed_external_path.rsplit('/',1)[-1].rsplit('?')[0]      # just the file name
-        my_embed_external_name = (f"{arg_page_id}-{my_embeds_externals_counter}-{requests.utils.unquote(orig_embed_external_name)}").replace(" ", "_").replace(":","-")    # local filename
+        my_embed_external_name = remove_illegal_characters((f"{arg_page_id}-{my_embeds_externals_counter}-{requests.utils.unquote(orig_embed_external_name)}").replace(" ", "_").replace(":","-"))    # local filename
         my_embed_external_path = os.path.join(my_outdirs[0],my_embed_external_name)        # local filename and path
         if arg_sphinx_compatible == True:
             my_embed_external_path_relative = os.path.join(str('../' + my_vars['attach_dir']),my_embed_external_name)
@@ -296,7 +299,7 @@ def dump_html(
     for embed in my_embeds:
         orig_embed_path = embed['src']        # online link to file
         orig_embed_name = orig_embed_path.rsplit('/',1)[-1].rsplit('?')[0]      # online file name
-        my_embed_name = requests.utils.unquote(orig_embed_name).replace(" ", "_")    # local file name
+        my_embed_name = remove_illegal_characters(requests.utils.unquote(orig_embed_name).replace(" ", "_"))    # local file name
         my_embed_path = my_outdirs[0] + my_embed_name                            # local file path
         if arg_sphinx_compatible == True:
             my_embed_path_relative = f"../{my_vars['attach_dir']}{my_embed_name}"
@@ -329,7 +332,7 @@ def dump_html(
         if my_emoticon_title not in my_emoticons_list:
             my_emoticons_list.append(my_emoticon_title)
             print(f"Getting emoticon: {my_emoticon_title}")
-            file_path = os.path.join(my_outdirs[1],my_emoticon_title)
+            file_path = os.path.join(my_outdirs[1],remove_illegal_characters(my_emoticon_title))
             request_emoticons = requests.get(emoticon['src'], auth=(arg_username, arg_api_token))
             open(file_path, 'wb').write(request_emoticons.content)
         emoticon['src'] = my_emoticon_path
