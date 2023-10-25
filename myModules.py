@@ -138,11 +138,15 @@ def get_attachments(arg_site,arg_page_id,arg_outdir_attach,arg_username,arg_api_
     my_attachments = response.json()['children']['attachment']['results']
     for attachment in my_attachments:
         attachment_title = remove_illegal_characters(requests.utils.unquote(attachment['title']).replace(" ","_").replace(":","-"))         # I want attachments without spaces
-        print(f"Downloading: {attachment_title}")
-        attachment_url = f"https://{arg_site}.atlassian.net/wiki{attachment['_links']['download']}"
-        request_attachment = requests.get(attachment_url, auth=(arg_username, arg_api_token),allow_redirects=True,timeout=30)
-        file_path = os.path.join(arg_outdir_attach,attachment_title)
-        open(os.path.join(arg_outdir_attach,attachment_title), 'wb').write(request_attachment.content)
+        attachment_file_path = os.path.join(arg_outdir_attach,attachment_title)
+        if not os.path.exists(attachment_file_path):
+            print(f"Downloading: {attachment_title}")
+            try:
+                attachment_url = f"https://{arg_site}.atlassian.net/wiki{attachment['_links']['download']}"
+                request_attachment = requests.get(attachment_url, auth=(arg_username, arg_api_token),allow_redirects=True,timeout=30)
+                open(attachment_file_path, 'wb').write(request_attachment.content)
+            except:
+                print(f"WARNING: Skipping attachment file {attachment_file_path} due to issues. url: {attachment_url}")
         my_attachments_list.append(attachment_title)
     return(my_attachments_list)
 
@@ -305,18 +309,23 @@ def dump_html(
             my_embed_path_relative = f"../{my_vars['attach_dir']}{my_embed_name}"
         else:
             my_embed_path_relative = f"{my_vars['attach_dir']}{my_embed_name}"
+        img = None
         try:
-            img = Image.open(my_embed_path)
+            if not os.path.exists(my_embed_path):
+                to_download = requests.get(orig_embed_path, allow_redirects=True, auth=(arg_username, arg_api_token))
+                open(my_embed_path,'wb').write(to_download.content)
+                img = Image.open(my_embed_path)
         except:
-            print(f"WARNING: Skipping embed file {my_embed_path} due to issues.")
+            print(f"WARNING: Skipping embed file {my_embed_path} due to issues. url: {orig_embed_path}")
         else:
-            if img.width < 600:
-                embed['width'] = img.width
-            else:
-                embed['width'] = 600
-            img.close
-            embed['height'] = "auto"
-            embed['onclick'] = f"window.open(\"{my_embed_path_relative}\")"
+            if img is not None:
+                if img.width < 600:
+                    embed['width'] = img.width
+                else:
+                    embed['width'] = 600
+                img.close
+                embed['height'] = "auto"
+                embed['onclick'] = f"window.open(\"{my_embed_path_relative}\")"
             embed['src'] = my_embed_path_relative
     #
     # dealing with "emoticon" and expands' "grey_arrow_down.png"
@@ -333,8 +342,13 @@ def dump_html(
             my_emoticons_list.append(my_emoticon_title)
             print(f"Getting emoticon: {my_emoticon_title}")
             file_path = os.path.join(my_outdirs[1],remove_illegal_characters(my_emoticon_title))
-            request_emoticons = requests.get(emoticon['src'], auth=(arg_username, arg_api_token))
-            open(file_path, 'wb').write(request_emoticons.content)
+            if not os.path.exists(file_path):
+                emoticon_src = emoticon['src']
+                try:
+                    request_emoticons = requests.get(emoticon_src, auth=(arg_username, arg_api_token))
+                    open(file_path, 'wb').write(request_emoticons.content)
+                except:
+                    print(f"WARNING: Skipping emoticon file {file_path} due to issues. url: {emoticon_src}")
         emoticon['src'] = my_emoticon_path
 
     my_body_export_view = get_body_export_view(arg_site,arg_page_id,arg_username,arg_api_token).json()
