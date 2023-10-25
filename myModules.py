@@ -377,7 +377,7 @@ def dump_html(
     # Putting HTML together
     #
     pretty_html = soup.prettify()
-    html_file = open(html_file_path, 'w')
+    html_file = open(html_file_path, 'w', encoding='utf-8')
     html_file.write(my_header)
     html_file.write(pretty_html)
     if len(my_attachments) > 0:
@@ -422,7 +422,7 @@ def dump_html(
         else:
             footer_rst = ""
 
-        rst_file = open(rst_file_path, 'w')
+        rst_file = open(rst_file_path, 'w', encoding='utf-8')
         rst_file.write(rst_page_header)
         rst_file.write(output_rst)
         rst_file.write(footer_rst)
