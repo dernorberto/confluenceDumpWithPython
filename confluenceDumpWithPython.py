@@ -34,7 +34,7 @@ parser.add_argument('--label', '-l', type=str,
                     help='Page label')
 parser.add_argument('--outdir', '-o', type=str, default='output',
                     help='Folder for export', required=False)
-parser.add_argument('--sphinx', '-x', action='store_true', default=True,
+parser.add_argument('--sphinx', '-x', action='store_true', default=False,
                     help='Sphinx compatible folder structure', required=False)
 parser.add_argument('--tags', action='store_true', default=False,
                     help='Add labels as .. tags::', required=False)
