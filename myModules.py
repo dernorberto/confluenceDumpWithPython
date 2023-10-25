@@ -1,3 +1,4 @@
+import shutil
 import requests
 import os.path
 import json
@@ -70,7 +71,7 @@ def mk_outdirs(arg_outdir="output"):       # setting default to output
         os.mkdir(outdir_styles)
 
     if not os.path.exists(outdir_styles + '/confluence.css'):
-        os.system('cp ' + script_dir + '/styles/confluence.css "' + outdir_styles + '"')
+        shutil.copy(f"{script_dir}/styles/confluence.css", f"{outdir_styles}confluence.css")
     return(outdir_list)
 
 def get_space_title(arg_site,arg_space_id,arg_username,arg_api_token):
