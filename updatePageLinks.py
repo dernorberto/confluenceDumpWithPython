@@ -32,7 +32,7 @@ for filename in os.listdir(target_folder):
 
 for filename in my_rst_files:
     path_and_name = os.path.join(target_folder, filename)
-    with open(path_and_name) as file:
+    with open(path_and_name, encoding='utf-8') as file:
         while line := file.readline():
             if ":confluencePageId:" in line:
                 my_rsts_pageid = line.split(":confluencePageId: ")[1][:-1]
@@ -41,7 +41,7 @@ for filename in my_rst_files:
                 break
 
     # write the file out
-    with open(rst_pageids_filename, 'w') as file:
+    with open(rst_pageids_filename, 'w', encoding='utf-8') as file:
         for k,v in rst_pageids.items():
             file.write(f"{k}:{v}\n")
 
@@ -70,9 +70,9 @@ for filename in my_rst_files:
         out_filename = filename
     out_path_and_name = os.path.join(target_folder, out_filename)
     # open input file
-    with open(path_and_name, 'r') as sfile:     # sfile = source file
+    with open(path_and_name, 'r', encoding='utf-8') as sfile:     # sfile = source file
         all_sfile_lines = sfile.readlines()
-    with open(out_path_and_name, 'w') as tfile:     # tfile = target file
+    with open(out_path_and_name, 'w', encoding='utf-8') as tfile:     # tfile = target file
         for n,line in enumerate(all_sfile_lines):
             if ("<https://optile.atlassian.net/wiki/spaces/" in line or "</wiki/spaces/" in line) and "/pages/" in line and not line.startswith("Original URL:"):
                 for find_match in re.findall(r'<?(https:\/\/\w+.*spaces\/\w+\/pages\/(\d+)?.*)>?|<(\/wiki\/spaces\/\w+\/pages\/(\d+)\/?.*)>',line):      # if there are >1 links in a line
@@ -99,7 +99,7 @@ for filename in my_rst_files:
 #    with open(path_and_name, 'w') as file:
 #        file.writelines(all_file_lines)
     # write the file out
-    with open(conf_pageids_filename, 'w') as file:
+    with open(conf_pageids_filename, 'w', encoding='utf-8') as file:
         for n in conf_pageids:
             file.write(str(n) + '\n')
 

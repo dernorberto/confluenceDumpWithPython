@@ -34,12 +34,14 @@ parser.add_argument('--label', '-l', type=str,
                     help='Page label')
 parser.add_argument('--outdir', '-o', type=str, default='output',
                     help='Folder for export', required=False)
-parser.add_argument('--sphinx', '-x', action='store_true', default=True,
+parser.add_argument('--sphinx', '-x', action='store_true', default=False,
                     help='Sphinx compatible folder structure', required=False)
 parser.add_argument('--tags', action='store_true', default=False,
                     help='Add labels as .. tags::', required=False)
 parser.add_argument('--html', action='store_true', default=False,
                     help='Include .html file in export (default is only .rst)', required=False)
+parser.add_argument('--no-rst', action='store_false', dest="rst", default=True,
+                    help='Disable .rst file in export', required=False)
 parser.add_argument('--showlabels', action='store_true', default=False,
                     help='Export .rst files with the page labels at the bottom', required=False)
 
@@ -100,7 +102,7 @@ if args.mode == 'single':
     my_outdirs = myModules.mk_outdirs(my_outdir_base)               # attachments, embeds, scripts
     my_page_labels = myModules.get_page_labels(atlassian_site,page_id,user_name,api_token)
     print(f"Base export folder is \"{my_outdir_base}\" and the Content goes to \"{my_outdir_content}\"")
-    myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,page_id,my_outdir_base, my_outdir_content,my_page_labels,page_parent,user_name,api_token,sphinx_compatible,sphinx_tags)
+    myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,page_id,my_outdir_base, my_outdir_content,my_page_labels,page_parent,user_name,api_token,sphinx_compatible,sphinx_tags,arg_html_output=args.html,arg_rst_output=args.rst)
     print("Done!")
 elif args.mode == 'space':
     ###########
@@ -166,7 +168,7 @@ elif args.mode == 'space':
             #my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
             mypage_url = f"{my_body_export_view['_links']['base']}{my_body_export_view['_links']['webui']}"
             print(f"dump_html arg sphinx_compatible = {sphinx_compatible}")
-            myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,p['page_id'],my_outdir_base,my_outdir_content,my_body_export_view_labels,p['parentId'],user_name,api_token,sphinx_compatible,sphinx_tags)
+            myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,p['page_id'],my_outdir_base,my_outdir_content,my_body_export_view_labels,p['parentId'],user_name,api_token,sphinx_compatible,sphinx_tags,arg_html_output=args.html,arg_rst_output=args.rst)
     print("Done!")
 elif args.mode == 'pageprops':
     ###############
@@ -238,6 +240,7 @@ elif args.mode == 'pageprops':
                 arg_sphinx_tags=sphinx_tags,
                 arg_type="reportchild",
                 arg_html_output=args.html,
+                arg_rst_output=args.rst,
                 arg_show_labels=args.showlabels
             )                  # creates html files for every child
     myModules.dump_html(
@@ -255,6 +258,7 @@ elif args.mode == 'pageprops':
             arg_sphinx_tags=sphinx_tags,
             arg_type="report",
             arg_html_output=args.html,
+            arg_rst_output=args.rst,
             arg_show_labels=args.showlabels
         )         # finally creating the HTML for the report page
     print("Done!")

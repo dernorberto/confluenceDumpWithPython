@@ -1,3 +1,4 @@
+import shutil
 import requests
 import os.path
 import json
@@ -70,7 +71,7 @@ def mk_outdirs(arg_outdir="output"):       # setting default to output
         os.mkdir(outdir_styles)
 
     if not os.path.exists(outdir_styles + '/confluence.css'):
-        os.system('cp ' + script_dir + '/styles/confluence.css "' + outdir_styles + '"')
+        shutil.copy(f"{script_dir}/styles/confluence.css", f"{outdir_styles}confluence.css")
     return(outdir_list)
 
 def get_space_title(arg_site,arg_space_id,arg_username,arg_api_token):
@@ -127,18 +128,25 @@ def get_page_parent(arg_site,arg_page_id,arg_username,arg_api_token):
     response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
     return(response.json()['parentId'])
 
+def remove_illegal_characters(input):
+    return re.sub(r'[^\w_\.\- ]+', '_', input)
+
 def get_attachments(arg_site,arg_page_id,arg_outdir_attach,arg_username,arg_api_token):
     my_attachments_list = []
     server_url = f"https://{arg_site}.atlassian.net/wiki/rest/api/content/{arg_page_id}?expand=children.attachment"
     response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
     my_attachments = response.json()['children']['attachment']['results']
     for attachment in my_attachments:
-        attachment_title = requests.utils.unquote(attachment['title']).replace(" ","_").replace(":","-")         # I want attachments without spaces
-        print(f"Downloading: {attachment_title}")
-        attachment_url = f"https://{arg_site}.atlassian.net/wiki{attachment['_links']['download']}"
-        request_attachment = requests.get(attachment_url, auth=(arg_username, arg_api_token),allow_redirects=True,timeout=30)
-        file_path = os.path.join(arg_outdir_attach,attachment_title)
-        open(os.path.join(arg_outdir_attach,attachment_title), 'wb').write(request_attachment.content)
+        attachment_title = remove_illegal_characters(requests.utils.unquote(attachment['title']).replace(" ","_").replace(":","-"))         # I want attachments without spaces
+        attachment_file_path = os.path.join(arg_outdir_attach,attachment_title)
+        if not os.path.exists(attachment_file_path):
+            print(f"Downloading: {attachment_title}")
+            try:
+                attachment_url = f"https://{arg_site}.atlassian.net/wiki{attachment['_links']['download']}"
+                request_attachment = requests.get(attachment_url, auth=(arg_username, arg_api_token),allow_redirects=True,timeout=30)
+                open(attachment_file_path, 'wb').write(request_attachment.content)
+            except:
+                print(f"WARNING: Skipping attachment file {attachment_file_path} due to issues. url: {attachment_url}")
         my_attachments_list.append(attachment_title)
     return(my_attachments_list)
 
@@ -191,6 +199,7 @@ def dump_html(
     arg_sphinx_tags=False,
     arg_type="",
     arg_html_output=False,
+    arg_rst_output=True,
     arg_show_labels=False
     ):
     """Create HTML and RST files
@@ -264,28 +273,31 @@ def dump_html(
     for embed_ext in my_embeds_externals:
         orig_embed_external_path = embed_ext['src']     # online link to file
         orig_embed_external_name = orig_embed_external_path.rsplit('/',1)[-1].rsplit('?')[0]      # just the file name
-        my_embed_external_name = (f"{arg_page_id}-{my_embeds_externals_counter}-{requests.utils.unquote(orig_embed_external_name)}").replace(" ", "_").replace(":","-")    # local filename
+        my_embed_external_name = remove_illegal_characters((f"{arg_page_id}-{my_embeds_externals_counter}-{requests.utils.unquote(orig_embed_external_name)}").replace(" ", "_").replace(":","-"))    # local filename
         my_embed_external_path = os.path.join(my_outdirs[0],my_embed_external_name)        # local filename and path
         if arg_sphinx_compatible == True:
             my_embed_external_path_relative = os.path.join(str('../' + my_vars['attach_dir']),my_embed_external_name)
         else:
             my_embed_external_path_relative = os.path.join(my_vars['attach_dir'],my_embed_external_name)
-        to_download = requests.get(orig_embed_external_path, allow_redirects=True)
         try:
-            open(my_embed_external_path,'wb').write(to_download.content)
+            if not os.path.exists(my_embed_external_path):
+                to_download = requests.get(orig_embed_external_path, allow_redirects=True)
+                open(my_embed_external_path,'wb').write(to_download.content)
+            img = Image.open(my_embed_external_path)
         except:
-            print(orig_embed_external_path)
-        img = Image.open(my_embed_external_path)
-        if img.width < 600:
-            embed_ext['width'] = img.width
+            print(f"WARNING: Skipping embed file {my_embed_external_path} due to issues. url: {orig_embed_external_path}")
         else:
-            embed_ext['width'] = 600
-        img.close
-        embed_ext['height'] = "auto"
-        embed_ext['onclick'] = f"window.open(\"{my_embed_external_path_relative}\")"
-        embed_ext['src'] = str(my_embed_external_path_relative)
-        embed_ext['data-image-src'] = str(my_embed_external_path_relative)
-        my_embeds_externals_counter = my_embeds_externals_counter + 1
+            if img is not None:
+                if img.width < 600:
+                    embed_ext['width'] = img.width
+                else:
+                    embed_ext['width'] = 600
+                img.close
+                embed_ext['height'] = "auto"
+                embed_ext['onclick'] = f"window.open(\"{my_embed_external_path_relative}\")"
+                embed_ext['src'] = str(my_embed_external_path_relative)
+                embed_ext['data-image-src'] = str(my_embed_external_path_relative)
+                my_embeds_externals_counter = my_embeds_externals_counter + 1
 
     #
     # dealing with "confluence-embedded-image"
@@ -295,24 +307,29 @@ def dump_html(
     for embed in my_embeds:
         orig_embed_path = embed['src']        # online link to file
         orig_embed_name = orig_embed_path.rsplit('/',1)[-1].rsplit('?')[0]      # online file name
-        my_embed_name = requests.utils.unquote(orig_embed_name).replace(" ", "_")    # local file name
+        my_embed_name = remove_illegal_characters(requests.utils.unquote(orig_embed_name).replace(" ", "_"))    # local file name
         my_embed_path = my_outdirs[0] + my_embed_name                            # local file path
         if arg_sphinx_compatible == True:
             my_embed_path_relative = f"../{my_vars['attach_dir']}{my_embed_name}"
         else:
             my_embed_path_relative = f"{my_vars['attach_dir']}{my_embed_name}"
+        img = None
         try:
+            if not os.path.exists(my_embed_path):
+                to_download = requests.get(orig_embed_path, allow_redirects=True, auth=(arg_username, arg_api_token))
+                open(my_embed_path,'wb').write(to_download.content)
             img = Image.open(my_embed_path)
         except:
-            print(f"WARNING: Skipping embed file {my_embed_path} due to issues.")
+            print(f"WARNING: Skipping embed file {my_embed_path} due to issues. url: {orig_embed_path}")
         else:
-            if img.width < 600:
-                embed['width'] = img.width
-            else:
-                embed['width'] = 600
-            img.close
-            embed['height'] = "auto"
-            embed['onclick'] = f"window.open(\"{my_embed_path_relative}\")"
+            if img is not None:
+                if img.width < 600:
+                    embed['width'] = img.width
+                else:
+                    embed['width'] = 600
+                img.close
+                embed['height'] = "auto"
+                embed['onclick'] = f"window.open(\"{my_embed_path_relative}\")"
             embed['src'] = my_embed_path_relative
     #
     # dealing with "emoticon" and expands' "grey_arrow_down.png"
@@ -328,9 +345,14 @@ def dump_html(
         if my_emoticon_title not in my_emoticons_list:
             my_emoticons_list.append(my_emoticon_title)
             print(f"Getting emoticon: {my_emoticon_title}")
-            file_path = os.path.join(my_outdirs[1],my_emoticon_title)
-            request_emoticons = requests.get(emoticon['src'], auth=(arg_username, arg_api_token))
-            open(file_path, 'wb').write(request_emoticons.content)
+            file_path = os.path.join(my_outdirs[1],remove_illegal_characters(my_emoticon_title))
+            if not os.path.exists(file_path):
+                emoticon_src = emoticon['src']
+                try:
+                    request_emoticons = requests.get(emoticon_src, auth=(arg_username, arg_api_token))
+                    open(file_path, 'wb').write(request_emoticons.content)
+                except:
+                    print(f"WARNING: Skipping emoticon file {file_path} due to issues. url: {emoticon_src}")
         emoticon['src'] = my_emoticon_path
 
     my_body_export_view = get_body_export_view(arg_site,arg_page_id,arg_username,arg_api_token).json()
@@ -376,7 +398,7 @@ def dump_html(
     # Putting HTML together
     #
     pretty_html = soup.prettify()
-    html_file = open(html_file_path, 'w')
+    html_file = open(html_file_path, 'w', encoding='utf-8')
     html_file.write(my_header)
     html_file.write(pretty_html)
     if len(my_attachments) > 0:
@@ -388,6 +410,9 @@ def dump_html(
     #
     # convert html to rst
     #
+    if not arg_rst_output:
+        return
+    
     rst_file_name = f"{html_file_name.replace('html','rst')}"
     rst_file_path = os.path.join(my_outdir_content,rst_file_name)
     try:
@@ -421,7 +446,7 @@ def dump_html(
         else:
             footer_rst = ""
 
-        rst_file = open(rst_file_path, 'w')
+        rst_file = open(rst_file_path, 'w', encoding='utf-8')
         rst_file.write(rst_page_header)
         rst_file.write(output_rst)
         rst_file.write(footer_rst)
