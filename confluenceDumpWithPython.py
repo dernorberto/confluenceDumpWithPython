@@ -1,4 +1,5 @@
 import os.path
+import json
 import argparse
 import myModules
 
@@ -155,20 +156,60 @@ elif args.mode == 'space':
             )
         # put it all together
         print(f"{len(all_pages_short)} pages to export")
+
+        progress_file = os.path.join(my_outdir_content, ".space_export_progress.json")
+        exported_page_ids = set()
+        if os.path.exists(progress_file):
+            try:
+                with open(progress_file, "r", encoding="utf-8") as f:
+                    progress_data = json.load(f)
+                    exported_page_ids = set(progress_data.get("exported_page_ids", []))
+                print(f"Loaded progress file with {len(exported_page_ids)} exported pages")
+            except (json.JSONDecodeError, OSError) as error:
+                print(f"WARNING: Could not read progress file {progress_file}: {error}")
+        else:
+            print("Progress file not found. Scanning output folder for already exported pages...")
+            for page_item in all_pages_short:
+                raw_title = page_item['pageTitle'].replace("/","-").replace(",","").replace("&","And").replace(" ","_")
+                safe_title = myModules.windows_safe_filename(raw_title.replace(" ", "_").replace(":", "-").replace("/", "-"))
+                expected_rst_path = os.path.join(my_outdir_content, f"{safe_title}.rst")
+                expected_html_path = os.path.join(my_outdir_content, f"{safe_title}.html")
+
+                if args.rst and args.html:
+                    is_complete = os.path.exists(expected_rst_path) and os.path.exists(expected_html_path)
+                elif args.rst:
+                    is_complete = os.path.exists(expected_rst_path)
+                elif args.html:
+                    is_complete = os.path.exists(expected_html_path)
+                else:
+                    is_complete = False
+
+                if is_complete:
+                    exported_page_ids.add(str(page_item['page_id']))
+
+            print(f"Recovered {len(exported_page_ids)} exported pages by scanning existing output files")
+
+        pages_to_export = [p for p in all_pages_short if str(p['page_id']) not in exported_page_ids]
+        print(f"{len(pages_to_export)} pages remaining to export")
+
         page_counter = 0
-        for p in all_pages_short:
+        for p in pages_to_export:
             page_counter = page_counter + 1
             my_body_export_view = myModules.get_body_export_view(atlassian_site,p['page_id'],user_name,api_token).json()
             my_body_export_view_html = my_body_export_view['body']['export_view']['value']
             my_body_export_view_name = p['pageTitle']
             my_body_export_view_title = p['pageTitle'].replace("/","-").replace(",","").replace("&","And").replace(" ","_")     # added .replace(" ","_") so that filenames have _ as a separator
             print()
-            print(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}")
+            print(f"Getting page #{page_counter}/{len(pages_to_export)}, {my_body_export_view_title}, {p['page_id']}")
             my_body_export_view_labels = myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token)
             #my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
             mypage_url = f"{my_body_export_view['_links']['base']}{my_body_export_view['_links']['webui']}"
             print(f"dump_html arg sphinx_compatible = {sphinx_compatible}")
             myModules.dump_html(atlassian_site,my_body_export_view_html,my_body_export_view_title,p['page_id'],my_outdir_base,my_outdir_content,my_body_export_view_labels,p['parentId'],user_name,api_token,sphinx_compatible,sphinx_tags,arg_html_output=args.html,arg_rst_output=args.rst)
+
+            exported_page_ids.add(str(p['page_id']))
+            with open(progress_file, "w", encoding="utf-8") as f:
+                json.dump({"exported_page_ids": sorted(exported_page_ids)}, f, indent=2)
     print("Done!")
 elif args.mode == 'pageprops':
     ###############

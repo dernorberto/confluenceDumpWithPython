@@ -2,7 +2,9 @@ import shutil
 import requests
 import os.path
 import json
+import time
 from requests.auth import HTTPBasicAuth
+from requests.exceptions import RequestException
 from bs4 import BeautifulSoup as bs
 import sys
 import pypandoc
@@ -28,6 +30,27 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 attach_dir = "_images/"
 emoticons_dir = "_images/"
 styles_dir = "_static/"
+
+
+def request_get_with_retry(url, retries=5, backoff_factor=1.5, timeout=30, **kwargs):
+    """Execute GET request with exponential backoff for transient network errors."""
+    last_error = None
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, timeout=timeout, **kwargs)
+            response.raise_for_status()
+            return response
+        except RequestException as error:
+            last_error = error
+            if attempt == retries - 1:
+                break
+            sleep_time = backoff_factor ** attempt
+            print(
+                f"WARNING: request failed ({error}). Retrying in {sleep_time:.1f}s "
+                f"[{attempt + 1}/{retries}] for URL: {url}"
+            )
+            time.sleep(sleep_time)
+    raise last_error
 
 def set_variables():
     """Set variables for export folders"""
@@ -88,53 +111,64 @@ def get_space_title(arg_site,arg_space_id,arg_username,arg_api_token):
     """
     server_url = (f"https://{arg_site}.atlassian.net/wiki/api/v2/spaces/{arg_space_id}")
 
-    response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30).json()['name']
+    response = request_get_with_retry(server_url, auth=(arg_username, arg_api_token), timeout=30).json()['name']
     return(response)
 
 def get_spaces_all(arg_site,arg_username,arg_api_token):
     server_url = f"https://{arg_site}.atlassian.net/wiki/api/v2/spaces/?limit=250"
-    response = requests.get(server_url, auth=(arg_username,arg_api_token),timeout=30)
+    response = request_get_with_retry(server_url, auth=(arg_username,arg_api_token), timeout=30)
     response.raise_for_status()  # raises exception when not a 2xx response
     space_list = response.json()['results']
     while 'next' in response.json()['_links'].keys():
         cursorserver_url = f"{server_url}&cursor{response.json()['_links']['next'].split('cursor')[1]}"
-        response = requests.get(cursorserver_url, auth=(arg_username,arg_api_token),timeout=30)
+        response = request_get_with_retry(cursorserver_url, auth=(arg_username,arg_api_token), timeout=30)
         space_list = space_list + response.json()['results']
     return(space_list)
 
 def get_pages_from_space(arg_site,arg_space_id,arg_username,arg_api_token):
     page_list = []
     server_url = f"https://{arg_site}.atlassian.net/wiki/api/v2/spaces/{arg_space_id}/pages?status=current&limit=250"
-    response = requests.get(server_url, auth=(arg_username,arg_api_token),timeout=30)
+    response = request_get_with_retry(server_url, auth=(arg_username,arg_api_token), timeout=30)
     page_list = response.json()['results']
     while 'next' in response.json()['_links'].keys():
         cursorserver_url = f"{server_url}&cursor{response.json()['_links']['next'].split('cursor')[1]}"
-        response = requests.get(cursorserver_url, auth=(arg_username,arg_api_token),timeout=30)
+        response = request_get_with_retry(cursorserver_url, auth=(arg_username,arg_api_token), timeout=30)
         page_list = page_list + response.json()['results']
     return(page_list)
 
 def get_body_export_view(arg_site,arg_page_id,arg_username,arg_api_token):
     server_url = f"https://{arg_site}.atlassian.net/wiki/rest/api/content/{arg_page_id}?expand=body.export_view"
-    response = requests.get(server_url, auth=(arg_username, arg_api_token))
+    response = request_get_with_retry(server_url, auth=(arg_username, arg_api_token), timeout=30)
     return(response)
 
 def get_page_name(arg_site,arg_page_id,arg_username,arg_api_token):
     server_url = f"https://{arg_site}.atlassian.net/wiki/rest/api/content/{arg_page_id}"
-    r_pagetree = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
+    r_pagetree = request_get_with_retry(server_url, auth=(arg_username, arg_api_token), timeout=30)
     return(r_pagetree.json()['id'] + "_" + r_pagetree.json()['title'])
 
 def get_page_parent(arg_site,arg_page_id,arg_username,arg_api_token):
     server_url = f"https://{arg_site}.atlassian.net/wiki/api/v2/pages/{arg_page_id}"
-    response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
+    response = request_get_with_retry(server_url, auth=(arg_username, arg_api_token), timeout=30)
     return(response.json()['parentId'])
 
 def remove_illegal_characters(input):
     return re.sub(r'[^\w_\.\- ]+', '_', input)
 
+def windows_safe_filename(name, max_len=180):
+    name = re.sub(r'[<>:"/\\|?*]', '_', name)
+    name = re.sub(r'[\x00-\x1f]', '_', name)
+    name = re.sub(r'[\s\.]+$', '', name)
+    name = name.strip()
+    if len(name) > max_len:
+        name = name[:max_len]
+    if not name:
+        name = "untitled"
+    return name
+
 def get_attachments(arg_site,arg_page_id,arg_outdir_attach,arg_username,arg_api_token):
     my_attachments_list = []
     server_url = f"https://{arg_site}.atlassian.net/wiki/rest/api/content/{arg_page_id}?expand=children.attachment"
-    response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
+    response = request_get_with_retry(server_url, auth=(arg_username, arg_api_token), timeout=30)
     my_attachments = response.json()['children']['attachment']['results']
     for attachment in my_attachments:
         attachment_title = remove_illegal_characters(requests.utils.unquote(attachment['title']).replace(" ","_").replace(":","-"))         # I want attachments without spaces
@@ -143,7 +177,7 @@ def get_attachments(arg_site,arg_page_id,arg_outdir_attach,arg_username,arg_api_
             print(f"Downloading: {attachment_title}")
             try:
                 attachment_url = f"https://{arg_site}.atlassian.net/wiki{attachment['_links']['download']}"
-                request_attachment = requests.get(attachment_url, auth=(arg_username, arg_api_token),allow_redirects=True,timeout=30)
+                request_attachment = request_get_with_retry(attachment_url, auth=(arg_username, arg_api_token), allow_redirects=True, timeout=30)
                 open(attachment_file_path, 'wb').write(request_attachment.content)
             except:
                 print(f"WARNING: Skipping attachment file {attachment_file_path} due to issues. url: {attachment_url}")
@@ -154,7 +188,7 @@ def get_attachments(arg_site,arg_page_id,arg_outdir_attach,arg_username,arg_api_
 def get_page_labels(arg_site,arg_page_id,arg_username,arg_api_token):
     html_labels = []
     server_url = f"https://{arg_site}.atlassian.net/wiki/api/v2/pages/{arg_page_id}/labels"
-    response = requests.get(server_url, auth=(arg_username,arg_api_token),timeout=30).json()
+    response = request_get_with_retry(server_url, auth=(arg_username,arg_api_token), timeout=30).json()
     for l in response['results']:
         html_labels.append(l['name'])
         print(f"Label: {l['name']}")
@@ -181,7 +215,7 @@ def get_page_properties_children(arg_site,arg_html,arg_outdir,arg_username,arg_a
 
 def get_editor_version(arg_site,arg_page_id,arg_username,arg_api_token):
     server_url = f"https://{arg_site}.atlassian.net/wiki/rest/api/content/{arg_page_id}?expand=metadata.properties.editor"
-    response = requests.get(server_url, auth=(arg_username, arg_api_token))
+    response = request_get_with_retry(server_url, auth=(arg_username, arg_api_token), timeout=30)
     return(response)
 
 def dump_html(
@@ -250,7 +284,8 @@ def dump_html(
         pre['class'] = [c for c in pre.get('class', []) if c != 'syntaxhighlighter-pre']
 
     # continuing
-    html_file_name = (f"{arg_title}.html").replace("/","-").replace(":","-").replace(" ","_")
+    safe_title = windows_safe_filename(arg_title.replace(" ", "_").replace(":", "-").replace("/", "-"))
+    html_file_name = f"{safe_title}.html"
     html_file_path = os.path.join(my_outdir_content,html_file_name)
     my_attachments = get_attachments(arg_site,arg_page_id,str(my_outdirs[0]),arg_username,arg_api_token)
     #
@@ -281,7 +316,7 @@ def dump_html(
             my_embed_external_path_relative = os.path.join(my_vars['attach_dir'],my_embed_external_name)
         try:
             if not os.path.exists(my_embed_external_path):
-                to_download = requests.get(orig_embed_external_path, allow_redirects=True)
+                to_download = request_get_with_retry(orig_embed_external_path, allow_redirects=True, timeout=30)
                 open(my_embed_external_path,'wb').write(to_download.content)
             img = Image.open(my_embed_external_path)
         except:
@@ -316,7 +351,7 @@ def dump_html(
         img = None
         try:
             if not os.path.exists(my_embed_path):
-                to_download = requests.get(orig_embed_path, allow_redirects=True, auth=(arg_username, arg_api_token))
+                to_download = request_get_with_retry(orig_embed_path, allow_redirects=True, auth=(arg_username, arg_api_token), timeout=30)
                 open(my_embed_path,'wb').write(to_download.content)
             img = Image.open(my_embed_path)
         except:
@@ -349,7 +384,7 @@ def dump_html(
             if not os.path.exists(file_path):
                 emoticon_src = emoticon['src']
                 try:
-                    request_emoticons = requests.get(emoticon_src, auth=(arg_username, arg_api_token))
+                    request_emoticons = request_get_with_retry(emoticon_src, auth=(arg_username, arg_api_token), timeout=30)
                     open(file_path, 'wb').write(request_emoticons.content)
                 except:
                     print(f"WARNING: Skipping emoticon file {file_path} due to issues. url: {emoticon_src}")
@@ -412,8 +447,8 @@ def dump_html(
     #
     if not arg_rst_output:
         return
-    
-    rst_file_name = f"{html_file_name.replace('html','rst')}"
+
+    rst_file_name = html_file_name.replace(".html", ".rst")
     rst_file_path = os.path.join(my_outdir_content,rst_file_name)
     try:
         output_rst = pypandoc.convert_file(str(html_file_path), 'rst', format='html',extra_args=['--standalone','--wrap=none','--list-tables'])
